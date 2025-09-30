@@ -502,20 +502,20 @@ const App: React.FC = () => {
         // Filter out banana prompt
         const baseSuggestions = promptSuggestions.filter(p => p.emoji !== '🍌');
 
-        // Filter out the current prompt if it exists, to try and get a new one
-        let suggestionsToChooseFrom = baseSuggestions.filter(p => p.prompt !== currentPrompt);
+        // Filter out the current prompt to ensure a new one is picked.
+        const suggestionsToChooseFrom = baseSuggestions.filter(p => p.prompt !== currentPrompt);
 
-        // If filtering leaves an empty pool (e.g., current prompt was the only one),
-        // fall back to the full non-banana list.
+        // If filtering leaves an empty pool, it means no new prompts are available.
         if (suggestionsToChooseFrom.length === 0) {
-             suggestionsToChooseFrom = baseSuggestions;
+            setError("No new random prompts available. Please write or select a new prompt.");
+            setAppState(AppState.Capturing); // Go back to capturing state to show the error
+            return;
         }
 
-        if (suggestionsToChooseFrom.length > 0) {
-            const randomSuggestion = suggestionsToChooseFrom[Math.floor(Math.random() * suggestionsToChooseFrom.length)];
-            finalPrompt = randomSuggestion.prompt;
-            setStoryPrompt(finalPrompt);
-        }
+        // Otherwise, pick a new random prompt from the filtered list.
+        const randomSuggestion = suggestionsToChooseFrom[Math.floor(Math.random() * suggestionsToChooseFrom.length)];
+        finalPrompt = randomSuggestion.prompt;
+        setStoryPrompt(finalPrompt);
     }
 
     if (!originalImage && !finalPrompt) {
