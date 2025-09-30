@@ -8,6 +8,7 @@ import React, { useState, useCallback, useRef, useEffect } from 'react';
 import { AppState } from './types';
 import { generateAnimationAssets, postProcessAnimation, AnimationAssets, analyzeAnimation, detectObjectsInAnimation, BoundingBox } from './services/geminiService';
 import { buildCreativeInstruction, buildPostProcessPrompt, promptSuggestions, buildObjectDetectionPrompt } from './prompts';
+import { resizeImage } from './utils/image';
 import CameraView, { CameraViewHandles } from './components/CameraView';
 import AnimationPlayer from './components/AnimationPlayer';
 import LoadingOverlay from './components/LoadingOverlay';
@@ -213,53 +214,6 @@ const ThemeSwitcher: React.FC<{
     );
 };
 
-
-const resizeImage = (dataUrl: string, maxWidth: number, maxHeight: number): Promise<string> => {
-  // We assume maxWidth and maxHeight are the same and represent the target square size.
-  const targetSize = maxWidth; 
-  return new Promise((resolve, reject) => {
-    const img = new Image();
-    img.onload = () => {
-      console.log(`[DEBUG] Original image dimensions: ${img.naturalWidth}x${img.naturalHeight}`);
-      const canvas = document.createElement('canvas');
-      const ctx = canvas.getContext('2d');
-
-      if (!ctx) {
-        return reject(new Error('Could not get canvas context for resizing.'));
-      }
-
-      canvas.width = targetSize;
-      canvas.height = targetSize;
-
-      const { width, height } = img;
-      let sx, sy, sWidth, sHeight;
-
-      // This logic finds the largest possible square in the center of the image
-      if (width > height) { // Landscape
-        sWidth = height;
-        sHeight = height;
-        sx = (width - height) / 2;
-        sy = 0;
-      } else { // Portrait or square
-        sWidth = width;
-        sHeight = width;
-        sx = 0;
-        sy = (height - width) / 2;
-      }
-      
-      // Draw the cropped square from the source image onto the target canvas, resizing it in the process.
-      ctx.drawImage(img, sx, sy, sWidth, sHeight, 0, 0, targetSize, targetSize);
-      
-      // Force JPEG format for smaller file size, which is better for uploads.
-      const resizedDataUrl = canvas.toDataURL('image/jpeg', 0.9);
-      resolve(resizedDataUrl);
-    };
-    img.onerror = () => {
-      reject(new Error('Failed to load image for resizing.'));
-    };
-    img.src = dataUrl;
-  });
-};
 
 const App: React.FC = () => {
   const [appState, setAppState] = useState<AppState>(AppState.Capturing);
@@ -538,13 +492,13 @@ const App: React.FC = () => {
     try {
       if (originalImage) {
         setLoadingMessage('Optimizing image...');
-        const resizedImage = await resizeImage(originalImage, 1024, 1024);
-        const imageParts = resizedImage.match(/^data:(image\/(?:jpeg|png|webp));base64,(.*)$/);
-        if (!imageParts || imageParts.length !== 3) {
+        const { dataUrl: resizedDataUrl, mime: resizedMime } = await resizeImage(originalImage, { maxSize: 1024 });
+        const imageParts = resizedDataUrl.match(/^data:.*?;base64,(.*)$/);
+        if (!imageParts || imageParts.length !== 2) {
           throw new Error("Could not process the resized image data.");
         }
-        mimeType = imageParts[1];
-        base64Image = imageParts[2];
+        mimeType = resizedMime;
+        base64Image = imageParts[1];
       }
       
       setLoadingMessage('Generating sprite sheet...');
@@ -592,13 +546,13 @@ const App: React.FC = () => {
                 throw new Error("Cannot apply style: no style image was provided.");
             }
             setLoadingMessage('Optimizing style image...');
-            const resizedStyleImage = await resizeImage(styleImage, 512, 512);
-            const styleImageParts = resizedStyleImage.match(/^data:(image\/(?:jpeg|png|webp));base64,(.*)$/);
-            if (!styleImageParts || styleImageParts.length !== 3) {
+            const { dataUrl: resizedStyleDataUrl, mime: resizedStyleMime } = await resizeImage(styleImage, { maxSize: 512 });
+            const styleImageParts = resizedStyleDataUrl.match(/^data:.*?;base64,(.*)$/);
+            if (!styleImageParts || styleImageParts.length !== 2) {
                 throw new Error("Could not process the style image data for post-processing.");
             }
-            stylePostMimeType = styleImageParts[1];
-            base64PostStyleImage = styleImageParts[2];
+            stylePostMimeType = resizedStyleMime;
+            base64PostStyleImage = styleImageParts[1];
         }
 
         const postProcessPrompt = buildPostProcessPrompt(
