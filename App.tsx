@@ -4,31 +4,32 @@
 */
 
 
-import React, { useState, useCallback, useRef, useEffect } from 'react';
-import { AppState, ImageState } from './src/types/types';
-import { generateAnimationAssets, postProcessAnimation, AnimationAssets, analyzeAnimation, detectObjectsInAnimation, BoundingBox } from './src/services/geminiService';
-import { buildCreativeInstruction, buildPostProcessPrompt, promptSuggestions, buildObjectDetectionPrompt } from './prompts';
-import { resizeImage } from './src/utils/image';
-import CameraView, { CameraViewHandles } from './components/CameraView';
-import AnimationPlayer from './components/AnimationPlayer';
-import LoadingOverlay from './components/LoadingOverlay';
-import { UploadIcon, SwitchCameraIcon, XCircleIcon, CameraIcon, LinkIcon } from './components/icons';
-import BanamimatorButton from './components/BanamimatorButton';
-import { useThemeManager } from './src/hooks/useThemeManager';
-import ThemeSwitcher from './src/components/features/theme/ThemeSwitcher';
-import ThemeCustomizer from './src/components/features/theme/ThemeCustomizer';
-import FileUploadManager from './src/components/features/uploader/FileUploadManager';
-import ErrorBoundary from './src/components/ErrorBoundary';
+import React, { useState, useCallback, useRef, useEffect, useReducer } from 'react';
+import { AppState, ImageState, AppStatus } from 'src/types/types';
+import { AnimationAssets, BoundingBox } from 'src/services/geminiService';
+import { promptSuggestions } from 'prompts';
+import CameraView, { CameraViewHandles } from 'src/components/CameraView';
+import AnimationPlayer from 'src/components/AnimationPlayer';
+import LoadingOverlay from 'src/components/LoadingOverlay';
+import { UploadIcon, SwitchCameraIcon, XCircleIcon, CameraIcon, LinkIcon } from 'src/components/icons';
+import BanamimatorButton from 'src/components/BanamimatorButton';
+import { useThemeManager } from 'src/hooks/useThemeManager';
+import ThemeSwitcher from 'src/components/features/theme/ThemeSwitcher';
+import ThemeCustomizer from 'src/components/features/theme/ThemeCustomizer';
+import FileUploadManager, { FileUploadManagerHandles } from 'src/components/features/uploader/FileUploadManager';
+import ErrorBoundary from 'src/components/ErrorBoundary';
+import { useAnimationCreator } from 'src/hooks/useAnimationCreator';
+import { useObjectDetection } from 'src/hooks/useObjectDetection';
+import { usePostProcessing } from 'src/hooks/usePostProcessing';
+import { appReducer, initialState } from 'src/reducers/appReducer';
 import {
   FRAME_COUNTS,
-  MAIN_IMAGE_MAX_SIZE,
-  STYLE_IMAGE_MAX_SIZE,
   TYPING_ANIMATION_TEXT,
   TYPING_ANIMATION_SPEED,
   TYPING_ANIMATION_DELETING_SPEED,
   TYPING_ANIMATION_PAUSE_MS,
   TYPING_ANIMATION_SHORT_PAUSE_MS,
-} from './src/constants/app';
+} from 'src/constants/app';
 
 // --- FEATURE FLAGS ---
 // Set to `true` to make uploading or capturing an image mandatory to create an animation.
@@ -59,29 +60,61 @@ const App: React.FC = () => {
     handleThemeExport,
     handleThemeImport,
   } = useThemeManager();
-  const [appState, setAppState] = useState<AppState>(AppState.Capturing);
-  const [imageState, setImageState] = useState<ImageState>({
-    original: null,
-    style: null,
-    motion: null,
-  });
-  const [styleIntensity, setStyleIntensity] = useState<number>(100);
-  const [animationAssets, setAnimationAssets] = useState<AnimationAssets | null>(null);
-  const [detectedObjects, setDetectedObjects] = useState<BoundingBox[] | null>(null);
-  const [loadingMessage, setLoadingMessage] = useState<string>('');
-  const [error, setError] = useState<string | null>(null);
-  const [storyPrompt, setStoryPrompt] = useState<string>('');
-  const [typedPlaceholder, setTypedPlaceholder] = useState('');
-  const [isPromptFocused, setIsPromptFocused] = useState(false);
-  const [frameCount, setFrameCount] = useState<number>(9);
-  const [postProcessStrength, setPostProcessStrength] = useState<number>(0.9);
+  const [state, dispatch] = useReducer(appReducer, initialState);
+  const {
+    appStatus,
+    imageState,
+    styleIntensity,
+    animationAssets,
+    detectedObjects,
+    loadingMessage,
+    error,
+    storyPrompt,
+    typedPlaceholder,
+    isPromptFocused,
+    frameCount,
+    postProcessStrength,
+    hasMultipleCameras,
+    isCameraOpen,
+  } = state;
+
   const cameraViewRef = useRef<CameraViewHandles>(null);
   const storyPromptTextareaRef = useRef<HTMLTextAreaElement>(null);
-  const [hasMultipleCameras, setHasMultipleCameras] = useState(false);
-  const [isCameraOpen, setIsCameraOpen] = useState(false);
+  const fileUploadManagerRef = useRef<FileUploadManagerHandles>(null);
   const shouldAnimateAfterCapture = useRef<boolean>(false);
   const typingAnimationRef = useRef<TypingAnimationState | null>(null);
-  const promptWasInitiallyEmpty = useRef<boolean>(false);
+
+  const { handleCreateAnimation } = useAnimationCreator(
+    imageState,
+    storyPrompt,
+    frameCount,
+    (payload) => dispatch({ type: 'SET_APP_STATUS', payload }),
+    (payload) => dispatch({ type: 'SET_LOADING_MESSAGE', payload }),
+    (payload) => dispatch({ type: 'SET_ERROR', payload }),
+    (payload) => dispatch({ type: 'SET_ANIMATION_ASSETS', payload }),
+    (payload) => dispatch({ type: 'SET_STORY_PROMPT', payload }),
+  );
+
+  const { handleDetectObjects } = useObjectDetection(
+    animationAssets,
+    (payload) => dispatch({ type: 'SET_APP_STATUS', payload }),
+    (payload) => dispatch({ type: 'SET_LOADING_MESSAGE', payload }),
+    (payload) => dispatch({ type: 'SET_ERROR', payload }),
+    (payload) => dispatch({ type: 'SET_DETECTED_OBJECTS', payload }),
+  );
+
+  const { handlePostProcess } = usePostProcessing(
+    animationAssets,
+    imageState,
+    frameCount,
+    styleIntensity,
+    postProcessStrength,
+    (payload) => dispatch({ type: 'SET_APP_STATUS', payload }),
+    (payload) => dispatch({ type: 'SET_LOADING_MESSAGE', payload }),
+    (payload) => dispatch({ type: 'SET_ERROR', payload }),
+    (payload) => dispatch({ type: 'SET_ANIMATION_ASSETS', payload }),
+  );
+
 
   useEffect(() => {
     const checkForMultipleCameras = async () => {
@@ -89,7 +122,7 @@ const App: React.FC = () => {
         try {
           const devices = await navigator.mediaDevices.enumerateDevices();
           const videoInputCount = devices.filter(d => d.kind === 'videoinput').length;
-          setHasMultipleCameras(videoInputCount > 1);
+          dispatch({ type: 'SET_HAS_MULTIPLE_CAMERAS', payload: videoInputCount > 1 });
         } catch (err) {
           console.error("Failed to enumerate media devices:", err);
         }
@@ -99,228 +132,66 @@ const App: React.FC = () => {
   }, []);
   
   useEffect(() => {
-    let timeoutId: number;
-
-    const startTypingAnimation = () => {
-      const fullText = TYPING_ANIMATION_TEXT;
-      let text = '';
-      let isDeleting = false;
-
-      const tick = () => {
-        if (isDeleting) {
-          text = fullText.substring(0, text.length - 1);
-        } else {
-          text = fullText.substring(0, text.length + 1);
-        }
-
-        setTypedPlaceholder(text);
-
-        let speed = isDeleting ? TYPING_ANIMATION_DELETING_SPEED : TYPING_ANIMATION_SPEED;
-
-        if (!isDeleting && text === fullText) {
-          speed = TYPING_ANIMATION_PAUSE_MS;
-          isDeleting = true;
-        } else if (isDeleting && text === '') {
-          isDeleting = false;
-          speed = TYPING_ANIMATION_SHORT_PAUSE_MS;
-        }
-
-        timeoutId = setTimeout(tick, speed);
-      };
-
-      timeoutId = setTimeout(tick, 100);
+    // This cleanup function is for the *previous* effect. It runs before the new effect logic.
+    // It's crucial to access the *current* value of the ref to clear any running timeout.
+    const cleanup = () => {
+      if (typingAnimationRef.current?.timeoutId) {
+        clearTimeout(typingAnimationRef.current.timeoutId);
+      }
     };
 
-    if (!storyPrompt.trim() && !isPromptFocused) {
-      startTypingAnimation();
-    } else {
-      setTypedPlaceholder('');
+    // Condition to STOP the animation and clear the placeholder.
+    if (storyPrompt.trim() || isPromptFocused) {
+      cleanup(); // Ensure any active animation is stopped immediately.
+      dispatch({ type: 'SET_TYPED_PLACEHOLDER', payload: '' });
+      return; // Exit the effect.
     }
 
-    return () => {
-      clearTimeout(timeoutId);
+    // Condition to START the animation.
+    typingAnimationRef.current = {
+      fullText: TYPING_ANIMATION_TEXT,
+      isDeleting: false,
+      text: '',
+      timeoutId: null,
+      speed: TYPING_ANIMATION_SPEED,
     };
+
+    const tick = () => {
+      const state = typingAnimationRef.current;
+      // If the state was cleared (e.g., by a fast dependency change), stop ticking.
+      if (!state) return;
+
+      let { fullText, isDeleting, text } = state;
+
+      if (isDeleting) {
+        text = fullText.substring(0, text.length - 1);
+      } else {
+        text = fullText.substring(0, text.length + 1);
+      }
+
+      dispatch({ type: 'SET_TYPED_PLACEHOLDER', payload: text });
+
+      let newSpeed = isDeleting ? TYPING_ANIMATION_DELETING_SPEED : TYPING_ANIMATION_SPEED;
+
+      if (!isDeleting && text === fullText) {
+        newSpeed = TYPING_ANIMATION_PAUSE_MS;
+        state.isDeleting = true;
+      } else if (isDeleting && text === '') {
+        state.isDeleting = false;
+        newSpeed = TYPING_ANIMATION_SHORT_PAUSE_MS;
+      }
+
+      state.text = text;
+      state.timeoutId = setTimeout(tick, newSpeed);
+    };
+
+    // Start the first tick.
+    typingAnimationRef.current.timeoutId = setTimeout(tick, TYPING_ANIMATION_SPEED);
+
+    // Return the cleanup function to be run when the component unmounts or dependencies change.
+    return cleanup;
   }, [storyPrompt, isPromptFocused]);
-
-  const handleCreateAnimation = useCallback(async (isRegeneration: boolean = false) => {
-    const currentPrompt = storyPrompt.trim();
-    let finalPrompt = currentPrompt;
-
-    if (!isRegeneration) {
-        promptWasInitiallyEmpty.current = !currentPrompt;
-    }
-
-    const shouldPickRandomPrompt = !currentPrompt || (isRegeneration && promptWasInitiallyEmpty.current);
-
-    if (shouldPickRandomPrompt) {
-        // Filter out banana prompt
-        const baseSuggestions = promptSuggestions.filter(p => p.emoji !== '🍌');
-
-        // Filter out the current prompt if it exists, to try and get a new one
-        let suggestionsToChooseFrom = baseSuggestions.filter(p => p.prompt !== currentPrompt);
-
-        // If filtering leaves an empty pool (e.g., current prompt was the only one),
-        // fall back to the full non-banana list.
-        if (suggestionsToChooseFrom.length === 0) {
-             suggestionsToChooseFrom = baseSuggestions;
-        }
-
-        if (suggestionsToChooseFrom.length > 0) {
-            const randomSuggestion = suggestionsToChooseFrom[Math.floor(Math.random() * suggestionsToChooseFrom.length)];
-            finalPrompt = randomSuggestion.prompt;
-            setStoryPrompt(finalPrompt);
-        }
-    }
-
-    if (!imageState.original && !finalPrompt) {
-      return;
-    }
-
-    const finalCreativeInstruction = buildCreativeInstruction(
-        finalPrompt,
-        imageState.original,
-        frameCount,
-    );
-
-    setAppState(AppState.Processing);
-    setError(null);
-    setDetectedObjects(null);
-    
-    let base64Image: string | null = null;
-    let mimeType: string | null = null;
-
-    try {
-      if (imageState.original) {
-        setLoadingMessage('Optimizing image...');
-        const { dataUrl: resizedDataUrl, mime: resizedMime } = await resizeImage(imageState.original, { maxSize: MAIN_IMAGE_MAX_SIZE });
-        const imageParts = resizedDataUrl.match(/^data:.*?;base64,(.*)$/);
-        if (!imageParts || imageParts.length !== 2) {
-          throw new Error("Could not process the resized image data.");
-        }
-        mimeType = resizedMime;
-        base64Image = imageParts[1];
-      }
-      
-      setLoadingMessage('Generating sprite sheet...');
-      
-      const generatedAsset = await generateAnimationAssets(
-          base64Image,
-          mimeType,
-          finalCreativeInstruction,
-          (message: string) => setLoadingMessage(message)
-      );
-
-      if (!generatedAsset || !generatedAsset.imageData.data) {
-        throw new Error(`Sprite sheet generation failed. Did not receive a valid image.`);
-      }
-
-      setAnimationAssets(generatedAsset);
-      setAppState(AppState.Animating);
-
-    } catch (err) {
-      console.error(err);
-      setError(err instanceof Error ? err.message : 'An unknown error occurred.');
-      setAppState(AppState.Capturing);
-    }
-  }, [storyPrompt, imageState.original, frameCount]);
   
-  const handlePostProcess = useCallback(async (effect: string, editPrompt?: string) => {
-    if (!animationAssets) {
-        setError("Cannot apply post-processing: no animation loaded.");
-        return;
-    }
-
-    setAppState(AppState.Processing);
-    setLoadingMessage(`Applying ${effect} effect...`);
-    setError(null);
-    setDetectedObjects(null); // Clear detections when post-processing
-
-    try {
-        const { data: base64SpriteSheet, mimeType } = animationAssets.imageData;
-        
-        let base64PostStyleImage: string | null = null;
-        let stylePostMimeType: string | null = null;
-
-        if (effect === 'apply-style') {
-            if (!imageState.style) {
-                throw new Error("Cannot apply style: no style image was provided.");
-            }
-            setLoadingMessage('Optimizing style image...');
-            const { dataUrl: resizedStyleDataUrl, mime: resizedStyleMime } = await resizeImage(imageState.style, { maxSize: STYLE_IMAGE_MAX_SIZE });
-            const styleImageParts = resizedStyleDataUrl.match(/^data:.*?;base64,(.*)$/);
-            if (!styleImageParts || styleImageParts.length !== 2) {
-                throw new Error("Could not process the style image data for post-processing.");
-            }
-            stylePostMimeType = resizedStyleMime;
-            base64PostStyleImage = styleImageParts[1];
-        }
-
-        const postProcessPrompt = buildPostProcessPrompt(
-            effect, 
-            frameCount,
-            animationAssets.frameDuration,
-            {
-                styleIntensity: effect === 'apply-style' ? styleIntensity : undefined,
-                editPrompt: effect === 'magic-edit' ? editPrompt : undefined,
-            }
-        );
-
-        const newAssets = await postProcessAnimation(
-            base64SpriteSheet,
-            mimeType,
-            postProcessPrompt,
-            (message: string) => setLoadingMessage(message),
-            base64PostStyleImage,
-            stylePostMimeType,
-            postProcessStrength
-        );
-
-        if (!newAssets || !newAssets.imageData.data) {
-            throw new Error(`Post-processing failed. Did not receive a valid image.`);
-        }
-        
-        setAnimationAssets(newAssets);
-
-    } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : 'An unknown post-processing error occurred.';
-      console.error(err);
-      setError(errorMessage);
-    } finally {
-        setAppState(AppState.Animating);
-    }
-  }, [animationAssets, frameCount, imageState.style, styleIntensity, postProcessStrength]);
-
-  const handleDetectObjects = useCallback(async () => {
-    if (!animationAssets) {
-      setError("Cannot detect objects: no animation loaded.");
-      return;
-    }
-  
-    setAppState(AppState.Processing);
-    setLoadingMessage('Detecting objects...');
-    setError(null);
-  
-    try {
-      const { data: base64SpriteSheet, mimeType } = animationAssets.imageData;
-      const detectionPrompt = buildObjectDetectionPrompt();
-  
-      const objects = await detectObjectsInAnimation(
-        base64SpriteSheet,
-        mimeType,
-        detectionPrompt
-      );
-  
-      setDetectedObjects(objects);
-  
-    } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : 'An unknown error occurred during object detection.';
-      console.error(err);
-      setError(errorMessage);
-    } finally {
-      setAppState(AppState.Animating);
-    }
-  }, [animationAssets]);
-
   useEffect(() => {
     if (imageState.original && shouldAnimateAfterCapture.current) {
         shouldAnimateAfterCapture.current = false;
@@ -343,8 +214,8 @@ const App: React.FC = () => {
   }, [storyPrompt, isPromptFocused]);
 
   const handleCapture = useCallback((imageDataUrl: string) => {
-    setImageState(prev => ({ ...prev, original: imageDataUrl }));
-    setIsCameraOpen(false);
+    dispatch({ type: 'SET_IMAGE_STATE', payload: { original: imageDataUrl } });
+    dispatch({ type: 'SET_IS_CAMERA_OPEN', payload: false });
   }, []);
 
   const handleFlipCamera = () => {
@@ -352,41 +223,26 @@ const App: React.FC = () => {
   };
 
   const handleCameraError = useCallback((message: string) => {
-    setError(message);
-    setAppState(AppState.Error);
+    dispatch({ type: 'SET_ERROR', payload: message });
+    dispatch({ type: 'SET_APP_STATUS', payload: AppStatus.Error });
   }, []);
 
   const handleClearImage = () => {
-    setImageState(prev => ({ ...prev, original: null }));
-    setIsCameraOpen(false);
+    dispatch({ type: 'SET_IMAGE_STATE', payload: { original: null } });
+    dispatch({ type: 'SET_IS_CAMERA_OPEN', payload: false });
   };
   
   const handleBack = () => {
-    setAppState(AppState.Capturing);
-    setAnimationAssets(null);
-    setError(null);
-    setDetectedObjects(null);
+    dispatch({ type: 'SET_APP_STATUS', payload: AppStatus.Capturing });
+    dispatch({ type: 'SET_ANIMATION_ASSETS', payload: null });
+    dispatch({ type: 'SET_ERROR', payload: null });
+    dispatch({ type: 'SET_DETECTED_OBJECTS', payload: null });
   };
   
   const handleSuggestionClick = (prompt: string) => {
-    setStoryPrompt(currentPrompt => {
-      if (ALLOW_MULTIPLE_EMOJI_SELECTION) {
-        const hasPrompt = currentPrompt.includes(prompt);
-        if (hasPrompt) {
-          // Remove the prompt and clean up whitespace
-          return currentPrompt
-            .replace(prompt, '')
-            .replace(/\s\s+/g, ' ') // Replace multiple spaces with a single one
-            .trim();
-        } else {
-          // Add the prompt
-          return (currentPrompt ? `${currentPrompt} ${prompt}` : prompt).trim();
-        }
-      } else {
-        // Single selection mode: if the current prompt is the one clicked, clear it.
-        // Otherwise, replace the current prompt with the clicked one.
-        return currentPrompt === prompt ? '' : prompt;
-      }
+    dispatch({
+      type: 'SET_STORY_PROMPT',
+      payload: storyPrompt === prompt ? '' : prompt,
     });
   };
   
@@ -404,8 +260,8 @@ const App: React.FC = () => {
   const isBananimateDisabled = !isCameraOpen && !imageState.original && (REQUIRE_IMAGE_FOR_ANIMATION || !storyPrompt.trim());
 
   const renderContent = () => {
-    switch (appState) {
-      case AppState.Capturing:
+    switch (appStatus) {
+      case AppStatus.Capturing:
         return (
           <div className="flex flex-col items-center justify-center w-full max-w-md mx-auto">
              <div className="w-full mt-3 mb-2 overflow-x-auto no-scrollbar" aria-label="Animation style suggestions">
@@ -437,7 +293,7 @@ const App: React.FC = () => {
                 {FRAME_COUNTS.map(count => (
                   <button
                     key={count}
-                    onClick={() => setFrameCount(count)}
+                    onClick={() => dispatch({ type: 'SET_FRAME_COUNT', payload: count })}
                     className={`px-4 py-1 rounded-md text-sm font-medium transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--color-background)] focus-visible:ring-[var(--color-accent)] ${
                       frameCount === count
                         ? 'bg-[var(--color-accent)] text-white'
@@ -465,24 +321,25 @@ const App: React.FC = () => {
                 rows={3}
                 className="w-full bg-[var(--color-overlay)] text-[var(--color-text-base)] border border-[var(--color-surface-alt)] rounded-lg px-4 py-3 focus:ring-[var(--color-accent)] focus:border-[var(--color-accent)] transition-all duration-300 text-lg resize-none overflow-y-auto"
                 value={storyPrompt}
-                onChange={e => setStoryPrompt(e.target.value)}
-                onFocus={() => setIsPromptFocused(true)}
+                onChange={e => dispatch({ type: 'SET_STORY_PROMPT', payload: e.target.value })}
+                onFocus={() => dispatch({ type: 'SET_IS_PROMPT_FOCUSED', payload: true })}
                 onBlur={() => {
                   // We add a small delay to allow click events on other elements to fire before the blur causes a layout shift.
-                  setTimeout(() => setIsPromptFocused(false), 150);
+                  setTimeout(() => dispatch({ type: 'SET_IS_PROMPT_FOCUSED', payload: false }), 150);
                 }}
                 aria-label="Animation prompt"
               />
             </div>
             <FileUploadManager
+              ref={fileUploadManagerRef}
               imageState={imageState}
-              setImageState={setImageState}
+              setImageState={(payload) => dispatch({ type: 'SET_IMAGE_STATE', payload })}
               styleIntensity={styleIntensity}
-              setStyleIntensity={setStyleIntensity}
-              setStoryPrompt={setStoryPrompt}
-              setAppState={setAppState}
-              setLoadingMessage={setLoadingMessage}
-              setError={setError}
+              setStyleIntensity={(payload) => dispatch({ type: 'SET_STYLE_INTENSITY', payload })}
+              setStoryPrompt={(payload) => dispatch({ type: 'SET_STORY_PROMPT', payload })}
+              setAppState={(payload) => dispatch({ type: 'SET_APP_STATUS', payload })}
+              setLoadingMessage={(payload) => dispatch({ type: 'SET_LOADING_MESSAGE', payload })}
+              setError={(payload) => dispatch({ type: 'SET_ERROR', payload })}
             />
             {error && (
               <div className="w-full bg-[var(--color-danger-surface)] border border-[var(--color-danger)] text-[var(--color-danger-text)] px-4 py-3 rounded-lg relative mb-4 flex items-center justify-between animate-shake" role="alert">
@@ -491,7 +348,7 @@ const App: React.FC = () => {
                   <span className="text-sm block mt-1">{error}</span>
                 </div>
                 <button
-                  onClick={() => setError(null)}
+                  onClick={() => dispatch({ type: 'SET_ERROR', payload: null })}
                   className="p-1 -mr-2 flex-shrink-0 self-start"
                   aria-label="Close error message"
                 >
@@ -516,7 +373,7 @@ const App: React.FC = () => {
                   <>
                       <CameraView ref={cameraViewRef} onCapture={handleCapture} onError={handleCameraError} />
                        <button
-                          onClick={() => setIsCameraOpen(false)}
+                          onClick={() => dispatch({ type: 'SET_IS_CAMERA_OPEN', payload: false })}
                           className="absolute top-4 left-4 bg-black/50 p-2 rounded-full text-white hover:bg-black/75 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-black focus-visible:ring-[var(--color-accent)]"
                           aria-label="Close camera"
                       >
@@ -539,7 +396,7 @@ const App: React.FC = () => {
                   </p>
                   <div className="flex flex-col items-center gap-4">
                     <button
-                      onClick={() => setIsCameraOpen(true)}
+                      onClick={() => dispatch({ type: 'SET_IS_CAMERA_OPEN', payload: true })}
                       className="w-52 bg-[var(--color-accent)] text-white font-bold py-3 px-6 rounded-lg hover:bg-[var(--color-accent-hover)] transition-colors duration-300 flex items-center justify-center focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-black focus-visible:ring-[var(--color-accent)]"
                       aria-label="Use camera to take a photo"
                     >
@@ -547,7 +404,7 @@ const App: React.FC = () => {
                       Open Camera
                     </button>
                     <button
-                      onClick={() => {}}
+                      onClick={() => fileUploadManagerRef.current?.handleUploadClick()}
                       className="w-52 bg-[var(--color-button)] text-white font-bold py-3 px-6 rounded-lg hover:bg-[var(--color-button-hover)] transition-colors duration-300 flex items-center justify-center focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-black focus-visible:ring-[var(--color-accent)]"
                       aria-label="Upload an image from your device"
                     >
@@ -555,7 +412,7 @@ const App: React.FC = () => {
                       Upload Image
                     </button>
                     <button
-                      onClick={() => {}}
+                      onClick={() => fileUploadManagerRef.current?.handlePasteUrl('main')}
                       className="w-52 bg-[var(--color-button)] text-white font-bold py-3 px-6 rounded-lg hover:bg-[var(--color-button-hover)] transition-colors duration-300 flex items-center justify-center focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-black focus-visible:ring-[var(--color-accent)]"
                       aria-label="Paste an image URL"
                     >
@@ -576,9 +433,9 @@ const App: React.FC = () => {
             </div>
           </div>
         );
-      case AppState.Processing:
+      case AppStatus.Processing:
         return <LoadingOverlay message={loadingMessage} />;
-      case AppState.Animating:
+      case AppStatus.Animating:
         return animationAssets ? (
           <AnimationPlayer 
             assets={animationAssets} 
@@ -589,13 +446,13 @@ const App: React.FC = () => {
             onDetectObjects={handleDetectObjects}
             detectedObjects={detectedObjects}
             error={error}
-            clearError={() => setError(null)}
+            clearError={() => dispatch({ type: 'SET_ERROR', payload: null })}
             styleImage={imageState.style}
             postProcessStrength={postProcessStrength}
-            onPostProcessStrengthChange={setPostProcessStrength}
+            onPostProcessStrengthChange={(payload) => dispatch({ type: 'SET_POST_PROCESS_STRENGTH', payload })}
           />
         ) : null;
-      case AppState.Error:
+      case AppStatus.Error:
         return (
           <div className="text-center bg-[var(--color-danger-surface)] p-8 rounded-lg max-w-md w-full">
             <p className="text-[var(--color-text-base)] mb-6 font-medium text-lg">{error}</p>
