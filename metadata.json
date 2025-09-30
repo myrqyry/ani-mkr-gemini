@@ -1,0 +1,7 @@
+{
+  "name": "Copy of Copy of Copy of Bananimate",
+  "description": "Create animated GIFs with Nano Banana from your images and prompts",
+  "requestFramePermissions": [
+    "camera"
+  ]
+}

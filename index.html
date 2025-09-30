@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/svg+xml" href="/vite.svg" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>🍌 BANANIMATE</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/onnxruntime-web@1.18.0/dist/ort.min.js"></script>
+    <script src="https://unpkg.com/gifshot@0.3.2/build/gifshot.min.js"></script>
+  <script type="importmap">
+{
+  "imports": {
+    "react-dom/": "https://aistudiocdn.com/react-dom@^19.1.1/",
+    "react": "https://aistudiocdn.com/react@^19.1.1",
+    "react/": "https://aistudiocdn.com/react@^19.1.1/",
+    "@google/genai": "https://aistudiocdn.com/@google/genai@^1.16.0"
+  }
+}
+</script>
+<style>
+  /* Remove default browser focus outline */
+  *:focus {
+    outline: none;
+  }
+  @keyframes shake {
+    10%, 90% { transform: translate3d(-1px, 0, 0); }
+    20%, 80% { transform: translate3d(2px, 0, 0); }
+    30%, 50%, 70% { transform: translate3d(-4px, 0, 0); }
+    40%, 60% { transform: translate3d(4px, 0, 0); }
+  }
+  .animate-shake {
+    animation: shake 0.5s ease-in-out;
+  }
+  /* Hide scrollbar for Chrome, Safari and Opera */
+  .no-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
+  /* Hide scrollbar for IE, Edge and Firefox */
+  .no-scrollbar {
+    -ms-overflow-style: none;  /* IE and Edge */
+    scrollbar-width: none;  /* Firefox */
+  }
+
+  /* --- THEME DEFINITIONS --- */
+  :root {
+    --color-background: #000000;
+    --color-surface: #111827;
+    --color-surface-alt: #4b5563;
+    --color-overlay: #1f2937;
+    --color-text-base: #f3f4f6;
+    --color-text-muted: #9ca3af;
+    --color-text-subtle: #6b7280;
+    --color-accent: #4f46e5;
+    --color-accent-hover: #6366f1;
+    --color-button: #374151;
+    --color-button-hover: #4b5563;
+    --color-danger: #be123c;
+    --color-danger-surface: rgba(159, 18, 57, 0.5);
+    --color-danger-text: #fecaca;
+    --color-warning: #facc15;
+    --color-success: #16a34a;
+    --color-success-hover: #15803d;
+    --color-info: #2563eb;
+    --color-info-hover: #1d4ed8;
+    --color-special: #8b5cf6;
+    --color-special-hover: #7c3aed;
+  }
+
+  body[data-theme="rose-pine"] {
+    --color-background: #191724;
+    --color-surface: #1f1d2e;
+    --color-surface-alt: #403d52;
+    --color-overlay: #26233a;
+    --color-text-base: #e0def4;
+    --color-text-muted: #908caa;
+    --color-text-subtle: #6e6a86;
+    --color-accent: #c4a7e7;
+    --color-accent-hover: #d4b8f7;
+    --color-button: #403d52;
+    --color-button-hover: #524f67;
+    --color-danger: #eb6f92;
+    --color-danger-surface: rgba(235, 111, 146, 0.2);
+    --color-danger-text: #ebbcba;
+    --color-warning: #f6c177;
+    --color-success: #9ccfd8;
+    --color-success-hover: #b0e0e8;
+    --color-info: #31748f;
+    --color-info-hover: #418fab;
+    --color-special: #ebbcba;
+    --color-special-hover: #f0c9c7;
+  }
+
+  body[data-theme="catppuccin"] {
+    --color-background: #1e1e2e;
+    --color-surface: #313244;
+    --color-surface-alt: #585b70;
+    --color-overlay: #45475a;
+    --color-text-base: #cdd6f4;
+    --color-text-muted: #a6adc8;
+    --color-text-subtle: #7f849c;
+    --color-accent: #89b4fa;
+    --color-accent-hover: #a3c5fa;
+    --color-button: #45475a;
+    --color-button-hover: #585b70;
+    --color-danger: #f38ba8;
+    --color-danger-surface: rgba(243, 139, 168, 0.2);
+    --color-danger-text: #f5c2e7;
+    --color-warning: #f9e2af;
+    --color-success: #a6e3a1;
+    --color-success-hover: #b9e9ba;
+    --color-info: #74c7ec;
+    --color-info-hover: #89dceb;
+    --color-special: #cba6f7;
+    --color-special-hover: #d5b8f9;
+  }
+
+</style>
+<link rel="stylesheet" href="/index.css">
+</head>
+  <body class="bg-[var(--color-background)]">
+    <div id="root"></div>
+    <script type="module" src="/index.tsx"></script>
+  </body>
+</html>
