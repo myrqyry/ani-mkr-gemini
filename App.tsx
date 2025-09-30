@@ -310,7 +310,7 @@ const App: React.FC = () => {
   useEffect(() => {
     // 1. Set the base theme class on the body
     document.body.dataset.theme = currentTheme;
-    localStorage.setItem('bananimate-theme', currentTheme);
+    try { localStorage.setItem('bananimate-theme', currentTheme); } catch {}
 
     // 2. Clear all previously set custom properties
     EDITABLE_THEME_PROPERTIES.forEach(prop => {
@@ -335,7 +335,7 @@ const App: React.FC = () => {
                 [cssVar]: value,
             }
         };
-        localStorage.setItem('bananimate-custom-themes', JSON.stringify(newCustoms));
+        try { localStorage.setItem('bananimate-custom-themes', JSON.stringify(newCustoms)); } catch {}
         return newCustoms;
     });
   };
@@ -344,7 +344,7 @@ const App: React.FC = () => {
     setCustomThemes(prev => {
         const newCustoms = { ...prev };
         delete newCustoms[currentTheme];
-        localStorage.setItem('bananimate-custom-themes', JSON.stringify(newCustoms));
+        try { localStorage.setItem('bananimate-custom-themes', JSON.stringify(newCustoms)); } catch {}
         return newCustoms;
     });
   };
@@ -386,7 +386,7 @@ const App: React.FC = () => {
             setCustomThemes(prev => {
                 // Merge imported themes with existing ones
                 const newCustoms = { ...prev, ...importedThemes };
-                localStorage.setItem('bananimate-custom-themes', JSON.stringify(newCustoms));
+                try { localStorage.setItem('bananimate-custom-themes', JSON.stringify(newCustoms)); } catch {}
                 return newCustoms;
             });
             setIsCustomizerOpen(false); // Close on successful import
@@ -502,20 +502,20 @@ const App: React.FC = () => {
         // Filter out banana prompt
         const baseSuggestions = promptSuggestions.filter(p => p.emoji !== '🍌');
 
-        // Filter out the current prompt to ensure a new one is picked.
-        const suggestionsToChooseFrom = baseSuggestions.filter(p => p.prompt !== currentPrompt);
+        // Filter out the current prompt if it exists, to try and get a new one
+        let suggestionsToChooseFrom = baseSuggestions.filter(p => p.prompt !== currentPrompt);
 
-        // If filtering leaves an empty pool, it means no new prompts are available.
+        // If filtering leaves an empty pool (e.g., current prompt was the only one),
+        // fall back to the full non-banana list.
         if (suggestionsToChooseFrom.length === 0) {
-            setError("No new random prompts available. Please write or select a new prompt.");
-            setAppState(AppState.Capturing); // Go back to capturing state to show the error
-            return;
+             suggestionsToChooseFrom = baseSuggestions;
         }
 
-        // Otherwise, pick a new random prompt from the filtered list.
-        const randomSuggestion = suggestionsToChooseFrom[Math.floor(Math.random() * suggestionsToChooseFrom.length)];
-        finalPrompt = randomSuggestion.prompt;
-        setStoryPrompt(finalPrompt);
+        if (suggestionsToChooseFrom.length > 0) {
+            const randomSuggestion = suggestionsToChooseFrom[Math.floor(Math.random() * suggestionsToChooseFrom.length)];
+            finalPrompt = randomSuggestion.prompt;
+            setStoryPrompt(finalPrompt);
+        }
     }
 
     if (!originalImage && !finalPrompt) {
