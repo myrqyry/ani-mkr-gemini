@@ -1,19 +1,28 @@
 export type ResizeOptions = {
-  maxSize: number;            // e.g., 1024
-  squareCrop?: boolean;       // default true for sprites
-  mime?: 'image/jpeg' | 'image/webp'; // default 'image/jpeg'
-  quality?: number;                   // default 0.85
+  maxSize: number;
+  squareCrop?: boolean;
+  mime?: 'image/jpeg' | 'image/webp';
+  quality?: number;
 };
+
+const imageCache = new Map<string, { dataUrl: string; mime: string }>();
 
 export async function resizeImage(
   dataUrl: string,
-  {
+  options: ResizeOptions,
+): Promise<{ dataUrl: string; mime: string }> {
+  const {
     maxSize,
     squareCrop = true,
     mime = 'image/jpeg',
     quality = 0.85,
-  }: ResizeOptions,
-): Promise<{ dataUrl: string; mime: string }> {
+  } = options;
+  const cacheKey = `${dataUrl}-${maxSize}-${squareCrop}-${mime}-${quality}`;
+
+  if (imageCache.has(cacheKey)) {
+    return imageCache.get(cacheKey)!;
+  }
+
   const img = await loadImage(dataUrl);
   const srcW = img.naturalWidth || img.width;
   const srcH = img.naturalHeight || img.height;
@@ -22,7 +31,10 @@ export async function resizeImage(
     throw new Error('Image has invalid dimensions.');
   }
 
-  let sx = 0, sy = 0, sw = srcW, sh = srcH;
+  let sx = 0,
+    sy = 0,
+    sw = srcW,
+    sh = srcH;
 
   if (squareCrop) {
     if (srcW > srcH) {
@@ -45,15 +57,15 @@ export async function resizeImage(
 
   ctx.drawImage(img, sx, sy, sw, sh, 0, 0, targetW, targetH);
 
-  // Note: switching to WEBP may yield smaller assets for graphics/flat colors
   const out = canvas.toDataURL(mime, quality);
-  return { dataUrl: out, mime };
+  const result = { dataUrl: out, mime };
+  imageCache.set(cacheKey, result);
+  return result;
 }
 
-function loadImage(src: string): Promise<HTMLImageElement> {
+export function loadImage(src: string): Promise<HTMLImageElement> {
   return new Promise((resolve, reject) => {
     const img = new Image();
-    // Important for cross-origin data URLs or fetched blobs with tainted canvas risk
     img.crossOrigin = 'anonymous';
     img.onload = () => resolve(img);
     img.onerror = () => reject(new Error('Failed to load image.'));
