@@ -161,7 +161,7 @@ export const detectObjectsInAnimation = async (
     const textPart = { text: detectionPrompt };
 
     const response: GenerateContentResponse = await ai.models.generateContent({
-        model: textModel, // gemini-2.5-flash is great for this
+        model: imageModel, // gemini-2.5-flash is great for this
         contents: [{
             role: "user",
             parts: [imagePart, textPart],
