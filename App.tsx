@@ -5,15 +5,30 @@
 
 
 import React, { useState, useCallback, useRef, useEffect } from 'react';
-import { AppState } from './types';
-import { generateAnimationAssets, postProcessAnimation, AnimationAssets, analyzeAnimation, detectObjectsInAnimation, BoundingBox } from './services/geminiService';
+import { AppState, ImageState } from './src/types/types';
+import { generateAnimationAssets, postProcessAnimation, AnimationAssets, analyzeAnimation, detectObjectsInAnimation, BoundingBox } from './src/services/geminiService';
 import { buildCreativeInstruction, buildPostProcessPrompt, promptSuggestions, buildObjectDetectionPrompt } from './prompts';
-import { resizeImage } from './utils/image';
+import { resizeImage } from './src/utils/image';
 import CameraView, { CameraViewHandles } from './components/CameraView';
 import AnimationPlayer from './components/AnimationPlayer';
 import LoadingOverlay from './components/LoadingOverlay';
-import { UploadIcon, SwitchCameraIcon, XCircleIcon, CameraIcon, LinkIcon, PaletteIcon, DownloadIcon } from './components/icons';
+import { UploadIcon, SwitchCameraIcon, XCircleIcon, CameraIcon, LinkIcon } from './components/icons';
 import BanamimatorButton from './components/BanamimatorButton';
+import { useThemeManager } from './src/hooks/useThemeManager';
+import ThemeSwitcher from './src/components/features/theme/ThemeSwitcher';
+import ThemeCustomizer from './src/components/features/theme/ThemeCustomizer';
+import FileUploadManager from './src/components/features/uploader/FileUploadManager';
+import ErrorBoundary from './src/components/ErrorBoundary';
+import {
+  FRAME_COUNTS,
+  MAIN_IMAGE_MAX_SIZE,
+  STYLE_IMAGE_MAX_SIZE,
+  TYPING_ANIMATION_TEXT,
+  TYPING_ANIMATION_SPEED,
+  TYPING_ANIMATION_DELETING_SPEED,
+  TYPING_ANIMATION_PAUSE_MS,
+  TYPING_ANIMATION_SHORT_PAUSE_MS,
+} from './src/constants/app';
 
 // --- FEATURE FLAGS ---
 // Set to `true` to make uploading or capturing an image mandatory to create an animation.
@@ -24,202 +39,32 @@ const REQUIRE_IMAGE_FOR_ANIMATION = true;
 // Set to `false` to only allow one emoji suggestion to be active at a time.
 const ALLOW_MULTIPLE_EMOJI_SELECTION = false;
 
-type Theme = 'default' | 'rose-pine' | 'catppuccin';
-type CustomThemes = Partial<Record<Theme, Partial<Record<string, string>>>>;
-
-const THEMES: { id: Theme, name: string }[] = [
-    { id: 'default', name: 'Default' },
-    { id: 'rose-pine', name: 'Rosé Pine' },
-    { id: 'catppuccin', name: 'Catppuccin' }
-];
-
-const EDITABLE_THEME_PROPERTIES = [
-    { cssVar: '--color-background', label: 'Background' },
-    { cssVar: '--color-surface', label: 'Surface' },
-    { cssVar: '--color-overlay', label: 'Overlay' },
-    { cssVar: '--color-accent', label: 'Accent' },
-    { cssVar: '--color-text-base', label: 'Text' },
-    { cssVar: '--color-danger', label: 'Danger' },
-];
-
-const THEME_PALETTES: Record<Theme, { name: string, hex: string }[]> = {
-    'default': [
-        { name: 'Black', hex: '#000000' },
-        { name: 'Gray 900', hex: '#111827' },
-        { name: 'Gray 700', hex: '#374151' },
-        { name: 'Gray 600', hex: '#4b5563' },
-        { name: 'Gray 400', hex: '#9ca3af' },
-        { name: 'Gray 100', hex: '#f3f4f6' },
-        { name: 'Indigo 600', hex: '#4f46e5' },
-        { name: 'Indigo 500', hex: '#6366f1' },
-        { name: 'Rose 700', hex: '#be123c' },
-        { name: 'Yellow 400', hex: '#facc15' },
-        { name: 'Green 600', hex: '#16a34a' },
-        { name: 'Blue 600', hex: '#2563eb' },
-        { name: 'Violet 500', hex: '#8b5cf6' },
-    ],
-    'rose-pine': [
-        { name: 'Base', hex: '#191724' },
-        { name: 'Surface', hex: '#1f1d2e' },
-        { name: 'Overlay', hex: '#26233a' },
-        { name: 'Muted', hex: '#6e6a86' },
-        { name: 'Subtle', hex: '#908caa' },
-        { name: 'Text', hex: '#e0def4' },
-        { name: 'Love', hex: '#eb6f92' },
-        { name: 'Gold', hex: '#f6c177' },
-        { name: 'Rose', hex: '#ebbcba' },
-        { name: 'Pine', hex: '#31748f' },
-        { name: 'Foam', hex: '#9ccfd8' },
-        { name: 'Iris', hex: '#c4a7e7' },
-        { name: 'Highlight Low', hex: '#21202e' },
-        { name: 'Highlight Med', hex: '#403d52' },
-        { name: 'Highlight High', hex: '#524f67' },
-    ],
-    'catppuccin': [
-        { name: 'Rosewater', hex: '#f5e0dc' },
-        { name: 'Flamingo', hex: '#f2cdcd' },
-        { name: 'Pink', hex: '#f5c2e7' },
-        { name: 'Mauve', hex: '#cba6f7' },
-        { name: 'Red', hex: '#f38ba8' },
-        { name: 'Maroon', hex: '#eba0ac' },
-        { name: 'Peach', hex: '#fab387' },
-        { name: 'Yellow', hex: '#f9e2af' },
-        { name: 'Green', hex: '#a6e3a1' },
-        { name: 'Teal', hex: '#94e2d5' },
-        { name: 'Sky', hex: '#89dceb' },
-        { name: 'Sapphire', hex: '#74c7ec' },
-        { name: 'Blue', hex: '#89b4fa' },
-        { name: 'Lavender', hex: '#b4befe' },
-        { name: 'Text', hex: '#cdd6f4' },
-        { name: 'Subtext1', hex: '#bac2de' },
-        { name: 'Subtext0', hex: '#a6adc8' },
-        { name: 'Overlay2', hex: '#9399b2' },
-        { name: 'Overlay1', hex: '#7f849c' },
-        { name: 'Overlay0', hex: '#6c7086' },
-        { name: 'Surface2', hex: '#585b70' },
-        { name: 'Surface1', hex: '#45475a' },
-        { name: 'Surface0', hex: '#313244' },
-        { name: 'Base', hex: '#1e1e2e' },
-        { name: 'Mantle', hex: '#181825' },
-        { name: 'Crust', hex: '#11111b' },
-    ],
-};
-
-const ThemeCustomizer: React.FC<{
-    theme: Theme;
-    customColors: Partial<Record<string, string>>;
-    onColorChange: (cssVar: string, value: string) => void;
-    onReset: () => void;
-    onImport: (e: React.ChangeEvent<HTMLInputElement>) => void;
-    onExport: () => void;
-    onClose: () => void;
-}> = ({ theme, customColors, onColorChange, onReset, onImport, onExport, onClose }) => {
-    const importInputRef = useRef<HTMLInputElement>(null);
-
-    return (
-        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4 backdrop-blur-sm">
-            <div className="bg-[var(--color-surface)] w-full max-w-md rounded-lg shadow-2xl border border-[var(--color-surface-alt)]">
-                <div className="p-4 border-b border-[var(--color-surface-alt)] flex justify-between items-center">
-                    <h2 className="text-lg font-semibold">Customize '{THEMES.find(t => t.id === theme)?.name}'</h2>
-                    <button onClick={onClose} aria-label="Close customizer">
-                        <XCircleIcon className="w-6 h-6 text-[var(--color-text-muted)] hover:text-[var(--color-text-base)]"/>
-                    </button>
-                </div>
-                <div className="p-4 space-y-4 max-h-[60vh] overflow-y-auto">
-                    <div>
-                        <h3 className="text-md font-medium text-[var(--color-text-muted)] mb-2">Editable Colors</h3>
-                        <div className="space-y-3">
-                            {EDITABLE_THEME_PROPERTIES.map(({ cssVar, label }) => {
-                                const currentColor = customColors[cssVar] || getComputedStyle(document.documentElement).getPropertyValue(cssVar).trim();
-                                return (
-                                <div key={cssVar} className="flex items-center justify-between">
-                                    <label htmlFor={cssVar} className="text-sm">{label}</label>
-                                    <div className="flex items-center gap-x-2">
-                                        <span className="text-sm text-[var(--color-text-muted)]">{currentColor}</span>
-                                        <input
-                                            id={cssVar}
-                                            type="color"
-                                            value={currentColor}
-                                            onChange={(e) => onColorChange(cssVar, e.target.value)}
-                                            className="w-8 h-8 p-0 border-0 rounded cursor-pointer bg-transparent appearance-none"
-                                            style={{backgroundColor: 'transparent'}}
-                                        />
-                                    </div>
-                                </div>
-                            )})}
-                        </div>
-                    </div>
-                    <div>
-                        <h3 className="text-md font-medium text-[var(--color-text-muted)] mb-2">Full Theme Palette</h3>
-                        <p className="text-xs text-[var(--color-text-subtle)] mb-3">Click a swatch to apply it to an editable color above.</p>
-                        <div className="flex flex-wrap gap-2">
-                            {THEME_PALETTES[theme].map(({ name, hex }) => (
-                                <div key={name} className="text-center">
-                                    <div
-                                        className="w-10 h-10 rounded-md border border-white/20"
-                                        style={{ backgroundColor: hex }}
-                                    ></div>
-                                    <p className="text-xs mt-1 text-[var(--color-text-muted)]">{name}</p>
-                                </div>
-                            ))}
-                        </div>
-                    </div>
-                </div>
-                <div className="p-4 border-t border-[var(--color-surface-alt)] flex flex-wrap justify-between items-center gap-2">
-                     <div className="flex gap-2">
-                        <button onClick={() => importInputRef.current?.click()} className="flex items-center gap-x-2 text-sm bg-[var(--color-button)] px-3 py-1.5 rounded-md hover:bg-[var(--color-button-hover)] transition-colors">
-                            <UploadIcon className="w-4 h-4" /> Import
-                        </button>
-                        <button onClick={onExport} className="flex items-center gap-x-2 text-sm bg-[var(--color-button)] px-3 py-1.5 rounded-md hover:bg-[var(--color-button-hover)] transition-colors">
-                            <DownloadIcon className="w-4 h-4" /> Export
-                        </button>
-                        <input type="file" ref={importInputRef} onChange={onImport} accept=".json" className="hidden" />
-                    </div>
-                    <button onClick={onReset} className="text-sm bg-[var(--color-danger-surface)] text-[var(--color-danger-text)] px-3 py-1.5 rounded-md hover:opacity-80 transition-opacity">
-                        Reset to Defaults
-                    </button>
-                </div>
-            </div>
-        </div>
-    );
-};
-
-const ThemeSwitcher: React.FC<{
-    currentTheme: Theme;
-    onThemeChange: (theme: Theme) => void;
-    onCustomize: () => void;
-}> = ({ currentTheme, onThemeChange, onCustomize }) => {
-    return (
-        <div className="flex items-center gap-x-2">
-            <span className="text-sm">Theme:</span>
-            <div className="flex items-center bg-[var(--color-surface)] rounded-md p-1">
-                {THEMES.map(theme => (
-                    <button
-                        key={theme.id}
-                        onClick={() => onThemeChange(theme.id)}
-                        className={`text-xs px-2 py-1 rounded transition-colors ${
-                            currentTheme === theme.id 
-                                ? 'bg-[var(--color-accent)] text-white' 
-                                : 'text-[var(--color-text-muted)] hover:bg-[var(--color-button-hover)]'
-                        }`}
-                    >
-                        {theme.name}
-                    </button>
-                ))}
-            </div>
-            <button onClick={onCustomize} aria-label="Customize theme" className="p-1.5 bg-[var(--color-surface)] rounded-md hover:bg-[var(--color-button-hover)] transition-colors">
-                <PaletteIcon className="w-4 h-4"/>
-            </button>
-        </div>
-    );
-};
-
+interface TypingAnimationState {
+  fullText: string;
+  isDeleting: boolean;
+  text: string;
+  timeoutId: number | null;
+  speed: number;
+}
 
 const App: React.FC = () => {
+  const {
+    currentTheme,
+    customThemes,
+    isCustomizerOpen,
+    setCurrentTheme,
+    setIsCustomizerOpen,
+    handleColorChange,
+    handleThemeReset,
+    handleThemeExport,
+    handleThemeImport,
+  } = useThemeManager();
   const [appState, setAppState] = useState<AppState>(AppState.Capturing);
-  const [originalImage, setOriginalImage] = useState<string | null>(null);
-  const [styleImage, setStyleImage] = useState<string | null>(null);
-  const [motionImage, setMotionImage] = useState<string | null>(null);
+  const [imageState, setImageState] = useState<ImageState>({
+    original: null,
+    style: null,
+    motion: null,
+  });
   const [styleIntensity, setStyleIntensity] = useState<number>(100);
   const [animationAssets, setAnimationAssets] = useState<AnimationAssets | null>(null);
   const [detectedObjects, setDetectedObjects] = useState<BoundingBox[] | null>(null);
@@ -230,133 +75,13 @@ const App: React.FC = () => {
   const [isPromptFocused, setIsPromptFocused] = useState(false);
   const [frameCount, setFrameCount] = useState<number>(9);
   const [postProcessStrength, setPostProcessStrength] = useState<number>(0.9);
-  const fileInputRef = useRef<HTMLInputElement>(null);
-  const styleFileInputRef = useRef<HTMLInputElement>(null);
-  const motionFileInputRef = useRef<HTMLInputElement>(null);
   const cameraViewRef = useRef<CameraViewHandles>(null);
   const storyPromptTextareaRef = useRef<HTMLTextAreaElement>(null);
   const [hasMultipleCameras, setHasMultipleCameras] = useState(false);
   const [isCameraOpen, setIsCameraOpen] = useState(false);
   const shouldAnimateAfterCapture = useRef<boolean>(false);
-  const typingAnimationRef = useRef<any>(null);
+  const typingAnimationRef = useRef<TypingAnimationState | null>(null);
   const promptWasInitiallyEmpty = useRef<boolean>(false);
-  const [currentTheme, setCurrentTheme] = useState<Theme>('default');
-  const [customThemes, setCustomThemes] = useState<CustomThemes>({});
-  const [isCustomizerOpen, setIsCustomizerOpen] = useState(false);
-
-
-  // --- THEME MANAGEMENT ---
-  useEffect(() => {
-    const storedTheme = localStorage.getItem('bananimate-theme') as Theme | null;
-    if (storedTheme && THEMES.some(t => t.id === storedTheme)) {
-        setCurrentTheme(storedTheme);
-    }
-    try {
-        const storedCustoms = localStorage.getItem('bananimate-custom-themes');
-        if (storedCustoms) {
-            setCustomThemes(JSON.parse(storedCustoms));
-        }
-    } catch (e) {
-        console.error("Failed to parse custom themes from localStorage", e);
-    }
-  }, []);
-
-  useEffect(() => {
-    // 1. Set the base theme class on the body
-    document.body.dataset.theme = currentTheme;
-    localStorage.setItem('bananimate-theme', currentTheme);
-
-    // 2. Clear all previously set custom properties
-    EDITABLE_THEME_PROPERTIES.forEach(prop => {
-        document.documentElement.style.removeProperty(prop.cssVar);
-    });
-
-    // 3. Apply custom colors for the current theme
-    const customs = customThemes[currentTheme] || {};
-    Object.entries(customs).forEach(([cssVar, value]) => {
-        if (value) {
-            document.documentElement.style.setProperty(cssVar, value);
-        }
-    });
-  }, [currentTheme, customThemes]);
-
-  const handleColorChange = (cssVar: string, value: string) => {
-    setCustomThemes(prev => {
-        const newCustoms = {
-            ...prev,
-            [currentTheme]: {
-                ...(prev[currentTheme] || {}),
-                [cssVar]: value,
-            }
-        };
-        localStorage.setItem('bananimate-custom-themes', JSON.stringify(newCustoms));
-        return newCustoms;
-    });
-  };
-
-  const handleThemeReset = () => {
-    setCustomThemes(prev => {
-        const newCustoms = { ...prev };
-        delete newCustoms[currentTheme];
-        localStorage.setItem('bananimate-custom-themes', JSON.stringify(newCustoms));
-        return newCustoms;
-    });
-  };
-
-  const handleThemeExport = () => {
-    try {
-        const jsonString = JSON.stringify(customThemes, null, 2);
-        const blob = new Blob([jsonString], { type: 'application/json' });
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = 'bananimate-themes.json';
-        document.body.appendChild(a);
-        a.click();
-        document.body.removeChild(a);
-        URL.revokeObjectURL(url);
-    } catch (e) {
-        console.error("Failed to export themes:", e);
-        setError("Could not export theme file.");
-    }
-  };
-
-  const handleThemeImport = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-
-    const reader = new FileReader();
-    reader.onload = (event) => {
-        try {
-            const result = event.target?.result;
-            if (typeof result !== 'string') throw new Error("File could not be read as text.");
-            const importedThemes = JSON.parse(result);
-            
-            // Basic validation
-            if (typeof importedThemes !== 'object' || importedThemes === null) {
-                throw new Error("Imported file is not a valid JSON object.");
-            }
-
-            setCustomThemes(prev => {
-                // Merge imported themes with existing ones
-                const newCustoms = { ...prev, ...importedThemes };
-                localStorage.setItem('bananimate-custom-themes', JSON.stringify(newCustoms));
-                return newCustoms;
-            });
-            setIsCustomizerOpen(false); // Close on successful import
-        } catch (err) {
-            console.error("Failed to import themes:", err);
-            setError(err instanceof Error ? `Import Error: ${err.message}` : "Failed to import theme file.");
-        }
-    };
-    reader.onerror = () => {
-        setError("Failed to read the selected theme file.");
-    };
-    reader.readAsText(file);
-    // Reset file input value to allow re-importing the same file
-    e.target.value = '';
-  };
-
 
   useEffect(() => {
     const checkForMultipleCameras = async () => {
@@ -374,71 +99,46 @@ const App: React.FC = () => {
   }, []);
   
   useEffect(() => {
+    let timeoutId: number;
+
     const startTypingAnimation = () => {
-        // Clear any existing animation
-        if (typingAnimationRef.current?.timeoutId) {
-            clearTimeout(typingAnimationRef.current.timeoutId);
+      const fullText = TYPING_ANIMATION_TEXT;
+      let text = '';
+      let isDeleting = false;
+
+      const tick = () => {
+        if (isDeleting) {
+          text = fullText.substring(0, text.length - 1);
+        } else {
+          text = fullText.substring(0, text.length + 1);
         }
 
-        typingAnimationRef.current = {
-            ...typingAnimationRef.current,
-            fullText: "'stop-motion animation of...'",
-            isDeleting: false,
-            text: '',
-            timeoutId: null,
-            speed: 100,
-        };
+        setTypedPlaceholder(text);
 
-        const tick = () => {
-            const state = typingAnimationRef.current;
-            if (!state) return;
-            let { fullText, isDeleting, text } = state;
+        let speed = isDeleting ? TYPING_ANIMATION_DELETING_SPEED : TYPING_ANIMATION_SPEED;
 
-            if (isDeleting) {
-                text = fullText.substring(0, text.length - 1);
-            } else {
-                text = fullText.substring(0, text.length + 1);
-            }
-            
-            setTypedPlaceholder(text);
-
-            let newSpeed = state.speed;
-            if(isDeleting) newSpeed /= 2;
-
-            if (!isDeleting && text === fullText) {
-                newSpeed = 2000; // Pause at end
-                state.isDeleting = true;
-            } else if (isDeleting && text === '') {
-                state.isDeleting = false;
-                newSpeed = 500; // Pause at start
-            }
-
-            state.text = text;
-            state.timeoutId = setTimeout(tick, newSpeed);
-        };
-        
-        typingAnimationRef.current.timeoutId = setTimeout(tick, typingAnimationRef.current.speed);
-    };
-
-    const stopTypingAnimation = () => {
-        if (typingAnimationRef.current?.timeoutId) {
-            clearTimeout(typingAnimationRef.current.timeoutId);
-            typingAnimationRef.current.timeoutId = null;
+        if (!isDeleting && text === fullText) {
+          speed = TYPING_ANIMATION_PAUSE_MS;
+          isDeleting = true;
+        } else if (isDeleting && text === '') {
+          isDeleting = false;
+          speed = TYPING_ANIMATION_SHORT_PAUSE_MS;
         }
-        setTypedPlaceholder('');
+
+        timeoutId = setTimeout(tick, speed);
+      };
+
+      timeoutId = setTimeout(tick, 100);
     };
 
     if (!storyPrompt.trim() && !isPromptFocused) {
-        startTypingAnimation();
+      startTypingAnimation();
     } else {
-        stopTypingAnimation();
+      setTypedPlaceholder('');
     }
 
-    // Cleanup on unmount
     return () => {
-        if (typingAnimationRef.current?.timeoutId) {
-            clearTimeout(typingAnimationRef.current.timeoutId);
-        }
+      clearTimeout(timeoutId);
     };
   }, [storyPrompt, isPromptFocused]);
 
@@ -472,13 +172,13 @@ const App: React.FC = () => {
         }
     }
 
-    if (!originalImage && !finalPrompt) {
+    if (!imageState.original && !finalPrompt) {
       return;
     }
 
     const finalCreativeInstruction = buildCreativeInstruction(
         finalPrompt,
-        originalImage,
+        imageState.original,
         frameCount,
     );
 
@@ -490,9 +190,9 @@ const App: React.FC = () => {
     let mimeType: string | null = null;
 
     try {
-      if (originalImage) {
+      if (imageState.original) {
         setLoadingMessage('Optimizing image...');
-        const { dataUrl: resizedDataUrl, mime: resizedMime } = await resizeImage(originalImage, { maxSize: 1024 });
+        const { dataUrl: resizedDataUrl, mime: resizedMime } = await resizeImage(imageState.original, { maxSize: MAIN_IMAGE_MAX_SIZE });
         const imageParts = resizedDataUrl.match(/^data:.*?;base64,(.*)$/);
         if (!imageParts || imageParts.length !== 2) {
           throw new Error("Could not process the resized image data.");
@@ -522,7 +222,7 @@ const App: React.FC = () => {
       setError(err instanceof Error ? err.message : 'An unknown error occurred.');
       setAppState(AppState.Capturing);
     }
-  }, [storyPrompt, originalImage, frameCount]);
+  }, [storyPrompt, imageState.original, frameCount]);
   
   const handlePostProcess = useCallback(async (effect: string, editPrompt?: string) => {
     if (!animationAssets) {
@@ -542,11 +242,11 @@ const App: React.FC = () => {
         let stylePostMimeType: string | null = null;
 
         if (effect === 'apply-style') {
-            if (!styleImage) {
+            if (!imageState.style) {
                 throw new Error("Cannot apply style: no style image was provided.");
             }
             setLoadingMessage('Optimizing style image...');
-            const { dataUrl: resizedStyleDataUrl, mime: resizedStyleMime } = await resizeImage(styleImage, { maxSize: 512 });
+            const { dataUrl: resizedStyleDataUrl, mime: resizedStyleMime } = await resizeImage(imageState.style, { maxSize: STYLE_IMAGE_MAX_SIZE });
             const styleImageParts = resizedStyleDataUrl.match(/^data:.*?;base64,(.*)$/);
             if (!styleImageParts || styleImageParts.length !== 2) {
                 throw new Error("Could not process the style image data for post-processing.");
@@ -588,7 +288,7 @@ const App: React.FC = () => {
     } finally {
         setAppState(AppState.Animating);
     }
-  }, [animationAssets, frameCount, styleImage, styleIntensity, postProcessStrength]);
+  }, [animationAssets, frameCount, imageState.style, styleIntensity, postProcessStrength]);
 
   const handleDetectObjects = useCallback(async () => {
     if (!animationAssets) {
@@ -622,11 +322,11 @@ const App: React.FC = () => {
   }, [animationAssets]);
 
   useEffect(() => {
-    if (originalImage && shouldAnimateAfterCapture.current) {
+    if (imageState.original && shouldAnimateAfterCapture.current) {
         shouldAnimateAfterCapture.current = false;
         handleCreateAnimation();
     }
-  }, [originalImage, handleCreateAnimation]);
+  }, [imageState.original, handleCreateAnimation]);
   
   useEffect(() => {
     if (storyPromptTextareaRef.current) {
@@ -643,7 +343,7 @@ const App: React.FC = () => {
   }, [storyPrompt, isPromptFocused]);
 
   const handleCapture = useCallback((imageDataUrl: string) => {
-    setOriginalImage(imageDataUrl);
+    setImageState(prev => ({ ...prev, original: imageDataUrl }));
     setIsCameraOpen(false);
   }, []);
 
@@ -656,189 +356,9 @@ const App: React.FC = () => {
     setAppState(AppState.Error);
   }, []);
 
-  const handleUploadClick = () => {
-    fileInputRef.current?.click();
-  };
-
-  const handleUploadStyleClick = () => {
-    styleFileInputRef.current?.click();
-  };
-
-  const handleUploadMotionClick = () => {
-    motionFileInputRef.current?.click();
-  };
-  
-  const handleMotionAnalysis = useCallback(async (motionFile: File) => {
-    setAppState(AppState.Processing);
-    setLoadingMessage('Analyzing animation...');
-    setError(null);
-
-    try {
-        const reader = new FileReader();
-        await new Promise<void>((resolve, reject) => {
-            reader.onloadend = () => resolve();
-            reader.onerror = () => {
-                console.error("Failed to read file");
-                reject(new Error(`Failed to read the selected ${motionFile.type} file.`));
-            };
-            reader.readAsDataURL(motionFile);
-        });
-
-        const dataUrl = reader.result as string;
-        
-        const newPrompt = await analyzeAnimation(
-            dataUrl,
-            (message: string) => setLoadingMessage(message)
-        );
-
-        setStoryPrompt(newPrompt);
-        
-    } catch (err) {
-        const errorMessage = err instanceof Error ? err.message : 'An unknown error occurred during analysis.';
-        console.error(err);
-        setError(errorMessage);
-    } finally {
-        setAppState(AppState.Capturing);
-    }
-  }, []);
-
-  const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    if (file) {
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        setOriginalImage(reader.result as string);
-      };
-      reader.onerror = () => {
-        console.error("Failed to read file");
-        setError("Failed to read the selected image file.");
-        setAppState(AppState.Error);
-      };
-      reader.readAsDataURL(file);
-    }
-  };
-  
-  const handleStyleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    if (file) {
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        setStyleImage(reader.result as string);
-      };
-      reader.onerror = () => {
-        console.error("Failed to read file");
-        setError("Failed to read the selected style image file.");
-        setAppState(AppState.Error);
-      };
-      reader.readAsDataURL(file);
-    }
-  };
-  
-  const handleMotionFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    if (file) {
-      const acceptedTypes = ['image/gif', 'image/webp', 'image/avif'];
-      if (acceptedTypes.includes(file.type)) {
-        const reader = new FileReader();
-        reader.onloadend = () => {
-          setMotionImage(reader.result as string);
-        };
-        reader.onerror = () => {
-          console.error("Failed to read file for motion preview");
-          setError("Failed to read the selected motion file.");
-        };
-        reader.readAsDataURL(file);
-        handleMotionAnalysis(file);
-      } else {
-        setError("Please upload a GIF, WEBP, or AVIF file for motion analysis.");
-      }
-    }
-  };
-
-    const handlePasteUrl = async (type: 'main' | 'style' | 'motion') => {
-        const url = window.prompt(`Please paste the URL for the ${type === 'main' ? 'subject' : type} image:`);
-        if (!url) return;
-
-        setAppState(AppState.Processing);
-        setLoadingMessage('Fetching image from URL...');
-        setError(null);
-
-        try {
-            const response = await fetch(url);
-            if (!response.ok) {
-                throw new Error(`Server responded with ${response.status}`);
-            }
-            const blob = await response.blob();
-            
-            const reader = new FileReader();
-            
-            reader.onloadend = () => {
-                const dataUrl = reader.result as string;
-                if (type === 'main') {
-                    if (!blob.type.startsWith('image/') || blob.type === 'image/gif') {
-                         setError('Please provide a URL for a static image (JPEG, PNG, WEBP, AVIF).');
-                         setAppState(AppState.Capturing);
-                         return;
-                    }
-                    setOriginalImage(dataUrl);
-                } else if (type === 'style') {
-                     if (!blob.type.startsWith('image/') || blob.type === 'image/gif') {
-                         setError('Please provide a URL for an image file (JPEG, PNG, WEBP, AVIF).');
-                         setAppState(AppState.Capturing);
-                         return;
-                    }
-                    setStyleImage(dataUrl);
-                } else if (type === 'motion') {
-                    const acceptedTypes = ['image/gif', 'image/webp', 'image/avif'];
-                    if (!acceptedTypes.includes(blob.type)) {
-                        setError('Please provide a URL for a GIF, WEBP, or AVIF file for motion analysis.');
-                        setAppState(AppState.Capturing);
-                        return;
-                    }
-                    setMotionImage(dataUrl);
-                    const extension = blob.type.split('/')[1] ?? 'gif';
-                    const file = new File([blob], `motion.${extension}`, { type: blob.type });
-                    handleMotionAnalysis(file);
-                    return;
-                }
-                setAppState(AppState.Capturing);
-            };
-
-            reader.onerror = () => {
-                throw new Error("Failed to read image data from the fetched URL.");
-            };
-
-            reader.readAsDataURL(blob);
-
-        } catch (err) {
-            console.error("Error fetching URL:", err);
-            const errorMessage = err instanceof Error ? err.message : 'An unknown error occurred.';
-            const corsErrorHint = errorMessage.toLowerCase().includes('failed to fetch') ? 'This might be due to a network error or the server\'s CORS policy preventing direct access. ' : '';
-            setError(`Could not fetch image from URL. ${corsErrorHint}Please try a different URL. Error: ${errorMessage}`);
-            setAppState(AppState.Capturing);
-        }
-    };
-
   const handleClearImage = () => {
-    setOriginalImage(null);
+    setImageState(prev => ({ ...prev, original: null }));
     setIsCameraOpen(false);
-    if(fileInputRef.current) {
-        fileInputRef.current.value = '';
-    }
-  };
-  
-  const handleClearStyleImage = () => {
-    setStyleImage(null);
-    if(styleFileInputRef.current) {
-        styleFileInputRef.current.value = '';
-    }
-  };
-
-  const handleClearMotionImage = () => {
-    setMotionImage(null);
-    if(motionFileInputRef.current) {
-        motionFileInputRef.current.value = '';
-    }
   };
   
   const handleBack = () => {
@@ -881,7 +401,7 @@ const App: React.FC = () => {
     }
   }, [isCameraOpen, handleCreateAnimation]);
   
-  const isBananimateDisabled = !isCameraOpen && !originalImage && (REQUIRE_IMAGE_FOR_ANIMATION || !storyPrompt.trim());
+  const isBananimateDisabled = !isCameraOpen && !imageState.original && (REQUIRE_IMAGE_FOR_ANIMATION || !storyPrompt.trim());
 
   const renderContent = () => {
     switch (appState) {
@@ -914,7 +434,7 @@ const App: React.FC = () => {
                 </div>
             </div>
             <div className="flex justify-center gap-2 mb-2">
-                {[4, 9, 16].map(count => (
+                {FRAME_COUNTS.map(count => (
                   <button
                     key={count}
                     onClick={() => setFrameCount(count)}
@@ -954,99 +474,16 @@ const App: React.FC = () => {
                 aria-label="Animation prompt"
               />
             </div>
-            <div className="w-full mb-4 flex flex-col sm:flex-row gap-2">
-                <div className="w-full sm:w-1/2">
-                    <div className="relative w-full h-24 bg-[var(--color-surface)] border-2 border-dashed border-[var(--color-surface-alt)] rounded-lg flex items-center justify-center">
-                        {styleImage ? (
-                            <>
-                                <img src={styleImage} alt="Style Preview" className="h-full w-full object-contain p-1" />
-                                <button
-                                    onClick={handleClearStyleImage}
-                                    className="absolute top-1 right-1 bg-black/50 p-1 rounded-full text-white hover:bg-black/75 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-black focus-visible:ring-[var(--color-accent)]"
-                                    aria-label="Remove style image"
-                                >
-                                    <XCircleIcon className="w-5 h-5" />
-                                </button>
-                            </>
-                        ) : (
-                            <div className="text-center">
-                                <p className="text-[var(--color-text-muted)] text-sm mb-2">Optionally, add a style</p>
-                                <div className="flex justify-center gap-x-2">
-                                  <button
-                                      onClick={handleUploadStyleClick}
-                                      className="bg-[var(--color-button)] text-white font-bold py-1 px-3 text-sm rounded-lg hover:bg-[var(--color-button-hover)] transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-black focus-visible:ring-[var(--color-accent)]"
-                                  >
-                                      Upload Style
-                                  </button>
-                                  <button
-                                      onClick={() => handlePasteUrl('style')}
-                                      className="bg-[var(--color-button)] text-white font-bold py-1 px-3 text-sm rounded-lg hover:bg-[var(--color-button-hover)] transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-black focus-visible:ring-[var(--color-accent)]"
-                                  >
-                                      URL
-                                  </button>
-                                </div>
-                            </div>
-                        )}
-                    </div>
-                    {styleImage && (
-                        <div className="mt-2 px-1">
-                            <label htmlFor="styleIntensity" className="block text-sm font-medium text-[var(--color-text-muted)]">
-                                Style Intensity
-                            </label>
-                            <div className="flex items-center gap-3 mt-1">
-                                <input
-                                    id="styleIntensity"
-                                    type="range"
-                                    min="0"
-                                    max="100"
-                                    step="1"
-                                    value={styleIntensity}
-                                    onChange={e => setStyleIntensity(Number(e.target.value))}
-                                    className="w-full h-2 bg-[var(--color-surface-alt)] rounded-lg appearance-none cursor-pointer accent-[var(--color-accent)]"
-                                    aria-label="Style intensity"
-                                />
-                                <span className="w-16 text-center text-sm bg-[var(--color-button)] rounded-md py-1">
-                                    {styleIntensity}%
-                                </span>
-                            </div>
-                        </div>
-                    )}
-                </div>
-                <div className="w-full sm:w-1/2">
-                    <div className="relative w-full h-24 bg-[var(--color-surface)] border-2 border-dashed border-[var(--color-surface-alt)] rounded-lg flex items-center justify-center">
-                        {motionImage ? (
-                             <>
-                                <img src={motionImage} alt="Motion Preview" className="h-full w-full object-contain p-1" />
-                                <button
-                                    onClick={handleClearMotionImage}
-                                    className="absolute top-1 right-1 bg-black/50 p-1 rounded-full text-white hover:bg-black/75 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-black focus-visible:ring-[var(--color-accent)]"
-                                    aria-label="Remove motion image"
-                                >
-                                    <XCircleIcon className="w-5 h-5" />
-                                </button>
-                            </>
-                        ) : (
-                            <div className="text-center">
-                                <p className="text-[var(--color-text-muted)] text-sm mb-2">Extract prompt from GIF</p>
-                                <div className="flex justify-center gap-x-2">
-                                  <button
-                                      onClick={handleUploadMotionClick}
-                                      className="bg-[var(--color-button)] text-white font-bold py-1 px-3 text-sm rounded-lg hover:bg-[var(--color-button-hover)] transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-black focus-visible:ring-[var(--color-accent)]"
-                                  >
-                                      Upload Motion
-                                  </button>
-                                  <button
-                                      onClick={() => handlePasteUrl('motion')}
-                                      className="bg-[var(--color-button)] text-white font-bold py-1 px-3 text-sm rounded-lg hover:bg-[var(--color-button-hover)] transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-black focus-visible:ring-[var(--color-accent)]"
-                                  >
-                                      URL
-                                  </button>
-                                </div>
-                            </div>
-                        )}
-                    </div>
-                </div>
-            </div>
+            <FileUploadManager
+              imageState={imageState}
+              setImageState={setImageState}
+              styleIntensity={styleIntensity}
+              setStyleIntensity={setStyleIntensity}
+              setStoryPrompt={setStoryPrompt}
+              setAppState={setAppState}
+              setLoadingMessage={setLoadingMessage}
+              setError={setError}
+            />
             {error && (
               <div className="w-full bg-[var(--color-danger-surface)] border border-[var(--color-danger)] text-[var(--color-danger-text)] px-4 py-3 rounded-lg relative mb-4 flex items-center justify-between animate-shake" role="alert">
                 <div className="pr-4">
@@ -1064,9 +501,9 @@ const App: React.FC = () => {
             )}
             
             <div className="relative w-full [@media(max-height:750px)]:w-96 [@media(max-height:650px)]:w-72 aspect-square bg-[var(--color-surface)] rounded-lg overflow-hidden shadow-2xl flex items-center justify-center">
-              {originalImage ? (
+              {imageState.original ? (
                   <>
-                      <img src={originalImage} alt="Preview" className="w-full h-full object-cover" />
+                      <img src={imageState.original} alt="Preview" className="w-full h-full object-cover" />
                       <button
                         onClick={handleClearImage}
                         className="absolute top-4 left-4 bg-black/50 p-2 rounded-full text-white hover:bg-black/75 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-black focus-visible:ring-[var(--color-accent)]"
@@ -1110,7 +547,7 @@ const App: React.FC = () => {
                       Open Camera
                     </button>
                     <button
-                      onClick={handleUploadClick}
+                      onClick={() => {}}
                       className="w-52 bg-[var(--color-button)] text-white font-bold py-3 px-6 rounded-lg hover:bg-[var(--color-button-hover)] transition-colors duration-300 flex items-center justify-center focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-black focus-visible:ring-[var(--color-accent)]"
                       aria-label="Upload an image from your device"
                     >
@@ -1118,7 +555,7 @@ const App: React.FC = () => {
                       Upload Image
                     </button>
                     <button
-                      onClick={() => handlePasteUrl('main')}
+                      onClick={() => {}}
                       className="w-52 bg-[var(--color-button)] text-white font-bold py-3 px-6 rounded-lg hover:bg-[var(--color-button-hover)] transition-colors duration-300 flex items-center justify-center focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-black focus-visible:ring-[var(--color-accent)]"
                       aria-label="Paste an image URL"
                     >
@@ -1137,28 +574,6 @@ const App: React.FC = () => {
                 />
               </div>
             </div>
-            
-            <input
-              type="file"
-              ref={fileInputRef}
-              onChange={handleFileChange}
-              className="hidden"
-              accept="image/png, image/jpeg, image/webp, image/avif"
-            />
-             <input
-              type="file"
-              ref={styleFileInputRef}
-              onChange={handleStyleFileChange}
-              className="hidden"
-              accept="image/png, image/jpeg, image/webp, image/avif"
-            />
-            <input
-              type="file"
-              ref={motionFileInputRef}
-              onChange={handleMotionFileChange}
-              className="hidden"
-              accept="image/gif,image/webp,image/avif"
-            />
           </div>
         );
       case AppState.Processing:
@@ -1175,7 +590,7 @@ const App: React.FC = () => {
             detectedObjects={detectedObjects}
             error={error}
             clearError={() => setError(null)}
-            styleImage={styleImage}
+            styleImage={imageState.style}
             postProcessStrength={postProcessStrength}
             onPostProcessStrengthChange={setPostProcessStrength}
           />
@@ -1197,9 +612,11 @@ const App: React.FC = () => {
 
   return (
     <div className="h-dvh bg-[var(--color-background)] text-[var(--color-text-base)] flex flex-col items-center p-4 overflow-y-auto">
-      <div className="w-full grow flex items-center [@media(max-height:750px)]:items-start justify-center">
-        {renderContent()}
-      </div>
+      <ErrorBoundary>
+        <div className="w-full grow flex items-center [@media(max-height:750px)]:items-start justify-center">
+          {renderContent()}
+        </div>
+      </ErrorBoundary>
       <footer className="w-full shrink-0 p-4 text-center text-[var(--color-text-subtle)] text-xs flex justify-center items-center gap-x-6">
         <span>Built with Gemini 2.5 Flash Image Preview | Created by <a href="http://x.com/pitaru" target="_blank" rel="noopener noreferrer" className="underline hover:text-[var(--color-accent)]">@pitaru</a></span>
         <ThemeSwitcher 
