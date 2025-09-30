@@ -1,7 +1,12 @@
-import React, { useRef } from 'react';
+import React, { useRef, useImperativeHandle, forwardRef } from 'react';
 import { AppState, ImageState } from '../../../types/types';
 import { analyzeAnimation } from '../../../services/geminiService';
 import { XCircleIcon } from '../../icons';
+
+export interface FileUploadManagerHandles {
+  handleUploadClick: () => void;
+  handlePasteUrl: (type: 'main' | 'style' | 'motion') => void;
+}
 
 interface FileUploadManagerProps {
   imageState: ImageState;
@@ -17,7 +22,7 @@ interface FileUploadManagerProps {
 const ALLOWED_IMAGE_TYPES = ['image/jpeg', 'image/png', 'image/webp', 'image/avif'];
 const ALLOWED_MOTION_TYPES = ['image/gif', 'image/webp', 'image/avif'];
 
-const FileUploadManager: React.FC<FileUploadManagerProps> = ({
+const FileUploadManager: React.FC<FileUploadManagerProps> = forwardRef<FileUploadManagerHandles, FileUploadManagerProps>(({
   imageState,
   setImageState,
   styleIntensity,
@@ -26,7 +31,7 @@ const FileUploadManager: React.FC<FileUploadManagerProps> = ({
   setAppState,
   setLoadingMessage,
   setError,
-}) => {
+}, ref) => {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const styleFileInputRef = useRef<HTMLInputElement>(null);
   const motionFileInputRef = useRef<HTMLInputElement>(null);
@@ -192,6 +197,11 @@ const FileUploadManager: React.FC<FileUploadManagerProps> = ({
     if (motionFileInputRef.current) motionFileInputRef.current.value = '';
   };
 
+  useImperativeHandle(ref, () => ({
+    handleUploadClick,
+    handlePasteUrl,
+  }));
+
   return (
     <>
       <div className="w-full mb-4 flex flex-col sm:flex-row gap-2">
@@ -310,6 +320,6 @@ const FileUploadManager: React.FC<FileUploadManagerProps> = ({
       />
     </>
   );
-};
+});
 
 export default FileUploadManager;

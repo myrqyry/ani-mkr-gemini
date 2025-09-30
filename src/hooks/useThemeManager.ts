@@ -10,7 +10,6 @@ export const useThemeManager = () => {
   const [currentTheme, setCurrentTheme] = useState<Theme>('default');
   const [customThemes, setCustomThemes] = useState<CustomThemes>({});
   const [isCustomizerOpen, setIsCustomizerOpen] = useState(false);
-  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     const storedTheme = localStorage.getItem('bananimate-theme') as Theme | null;
@@ -91,7 +90,6 @@ export const useThemeManager = () => {
       URL.revokeObjectURL(url);
     } catch (e) {
       console.error('Failed to export themes:', e);
-      setError('Could not export theme file.');
     }
   };
 
@@ -122,11 +120,10 @@ export const useThemeManager = () => {
         setIsCustomizerOpen(false);
       } catch (err) {
         console.error('Failed to import themes:', err);
-        setError(err instanceof Error ? `Import Error: ${err.message}` : 'Failed to import theme file.');
       }
     };
     reader.onerror = () => {
-      setError('Failed to read the selected theme file.');
+      console.error('Failed to read the selected theme file.');
     };
     reader.readAsText(file);
     e.target.value = '';
@@ -136,7 +133,6 @@ export const useThemeManager = () => {
     currentTheme,
     customThemes,
     isCustomizerOpen,
-    error,
     setCurrentTheme,
     setIsCustomizerOpen,
     handleColorChange,

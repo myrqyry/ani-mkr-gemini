@@ -7,7 +7,7 @@
 
 import { GoogleGenAI, GenerateContentResponse, Modality } from "@google/genai";
 import { Frame } from "../types";
-import { buildAnalysisPrompt } from "../prompts";
+import { buildAnalysisPrompt } from "../../prompts";
 
 const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
 const imageModel = 'gemini-2.5-flash-image-preview';
