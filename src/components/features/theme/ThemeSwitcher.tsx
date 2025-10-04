@@ -1,7 +1,7 @@
 import React from 'react';
-import { Theme } from '../../../types/types';
-import { THEMES } from '../../../constants/theme';
-import { PaletteIcon } from '../../icons';
+import { Theme } from '@/src/types/types';
+import { THEMES } from '@/src/constants/theme';
+import { PaletteIcon } from '@/components/icons';
 
 interface ThemeSwitcherProps {
   /** The current theme. */

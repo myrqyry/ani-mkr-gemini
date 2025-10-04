@@ -4,24 +4,24 @@
 */
 
 
-import React, { useState, useCallback, useRef, useEffect, useReducer } from 'react';
-import { AppState, ImageState, AppStatus } from 'src/types/types';
-import { AnimationAssets, BoundingBox } from 'src/services/geminiService';
-import { promptSuggestions } from 'prompts';
-import CameraView, { CameraViewHandles } from 'src/components/CameraView';
-import AnimationPlayer from 'src/components/AnimationPlayer';
-import LoadingOverlay from 'src/components/LoadingOverlay';
-import { UploadIcon, SwitchCameraIcon, XCircleIcon, CameraIcon, LinkIcon } from 'src/components/icons';
-import BanamimatorButton from 'src/components/BanamimatorButton';
-import { useThemeManager } from 'src/hooks/useThemeManager';
-import ThemeSwitcher from 'src/components/features/theme/ThemeSwitcher';
-import ThemeCustomizer from 'src/components/features/theme/ThemeCustomizer';
-import FileUploadManager, { FileUploadManagerHandles } from 'src/components/features/uploader/FileUploadManager';
-import ErrorBoundary from 'src/components/ErrorBoundary';
-import { useAnimationCreator } from 'src/hooks/useAnimationCreator';
-import { useObjectDetection } from 'src/hooks/useObjectDetection';
-import { usePostProcessing } from 'src/hooks/usePostProcessing';
-import { appReducer, initialState } from 'src/reducers/appReducer';
+import React, { useCallback, useRef, useEffect, useReducer } from 'react';
+import { AppState, ImageState, AppStatus, AnimationAssets } from '@/src/types/types';
+import { BoundingBox, generateAnimationAssets } from '@/src/services/geminiService';
+import { promptSuggestions } from '@/prompts';
+import CameraView, { CameraViewHandles } from '@/components/CameraView';
+import AnimationPlayer from '@/components/AnimationPlayer';
+import LoadingOverlay from '@/components/LoadingOverlay';
+import { UploadIcon, SwitchCameraIcon, XCircleIcon, CameraIcon, LinkIcon } from '@/components/icons';
+import BanamimatorButton from '@/components/BanamimatorButton';
+import { useThemeManager } from '@/src/hooks/useThemeManager';
+import ThemeSwitcher from '@/src/components/features/theme/ThemeSwitcher';
+import ThemeCustomizer from '@/src/components/features/theme/ThemeCustomizer';
+import FileUploadManager, { FileUploadManagerHandles } from '@/src/components/features/uploader/FileUploadManager';
+import ErrorBoundary from '@/src/components/ErrorBoundary';
+import { useAnimationCreator } from '@/src/hooks/useAnimationCreator';
+import { useObjectDetection } from '@/src/hooks/useObjectDetection';
+import { usePostProcessing } from '@/src/hooks/usePostProcessing';
+import { appReducer, initialState } from '@/src/reducers/appReducer';
 import {
   FRAME_COUNTS,
   TYPING_ANIMATION_TEXT,
@@ -29,7 +29,8 @@ import {
   TYPING_ANIMATION_DELETING_SPEED,
   TYPING_ANIMATION_PAUSE_MS,
   TYPING_ANIMATION_SHORT_PAUSE_MS,
-} from 'src/constants/app';
+} from '@/src/constants/app';
+import { resizeImage } from '@/src/utils/image';
 
 // --- FEATURE FLAGS ---
 // Set to `true` to make uploading or capturing an image mandatory to create an animation.
@@ -65,7 +66,9 @@ const App: React.FC = () => {
     appStatus,
     imageState,
     styleIntensity,
+    animationQuality,
     animationAssets,
+    animationHistory,
     detectedObjects,
     loadingMessage,
     error,
@@ -88,6 +91,7 @@ const App: React.FC = () => {
     imageState,
     storyPrompt,
     frameCount,
+    styleIntensity,
     (payload) => dispatch({ type: 'SET_APP_STATUS', payload }),
     (payload) => dispatch({ type: 'SET_LOADING_MESSAGE', payload }),
     (payload) => dispatch({ type: 'SET_ERROR', payload }),
@@ -115,6 +119,62 @@ const App: React.FC = () => {
     (payload) => dispatch({ type: 'SET_ANIMATION_ASSETS', payload }),
   );
 
+  const handleContinueStory = async () => {
+    if (!animationAssets) return;
+
+    const continuePrompt = `Continue this story: ${storyPrompt}. What happens next? Create the next scene in this animation sequence, maintaining character and scene consistency.`;
+
+    try {
+      dispatch({ type: 'SET_APP_STATUS', payload: AppStatus.Processing });
+      dispatch({ type: 'SET_LOADING_MESSAGE', payload: 'Creating next scene...' });
+
+      const lastFrameSprite = await new Promise<HTMLImageElement>((resolve, reject) => {
+        const img = new Image();
+        img.onload = () => resolve(img);
+        img.onerror = reject;
+        img.src = `data:${animationAssets.imageData.mimeType};base64,${animationAssets.imageData.data}`;
+      });
+
+      const canvas = document.createElement('canvas');
+      const ctx = canvas.getContext('2d');
+      if (!ctx) throw new Error('Canvas context not available');
+
+      const gridDim = Math.sqrt(frameCount);
+      const frameWidth = lastFrameSprite.naturalWidth / gridDim;
+      const frameHeight = lastFrameSprite.naturalHeight / gridDim;
+      const lastFrameX = ((frameCount - 1) % gridDim) * frameWidth;
+      const lastFrameY = Math.floor((frameCount - 1) / gridDim) * frameHeight;
+
+      canvas.width = frameWidth;
+      canvas.height = frameHeight;
+
+      ctx.drawImage(lastFrameSprite, lastFrameX, lastFrameY, frameWidth, frameHeight, 0, 0, frameWidth, frameHeight);
+
+      const lastFrameDataUrl = canvas.toDataURL('image/png');
+      const { dataUrl: resizedDataUrl } = await resizeImage(lastFrameDataUrl, { maxSize: 512 });
+      const base64Data = resizedDataUrl.split(',')[1];
+
+      const nextAnimation = await generateAnimationAssets(
+        base64Data,
+        'image/png',
+        null,
+        null,
+        continuePrompt,
+        (message) => dispatch({ type: 'SET_LOADING_MESSAGE', payload: message }),
+        styleIntensity
+      );
+
+      if (nextAnimation) {
+        dispatch({ type: 'SET_ANIMATION_HISTORY', payload: [...animationHistory, animationAssets] });
+        dispatch({ type: 'SET_ANIMATION_ASSETS', payload: nextAnimation });
+        dispatch({ type: 'SET_APP_STATUS', payload: AppStatus.Animating });
+      }
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'An unknown error occurred.';
+      dispatch({ type: 'SET_ERROR', payload: errorMessage });
+      dispatch({ type: 'SET_APP_STATUS', payload: AppStatus.Error });
+    }
+  };
 
   useEffect(() => {
     const checkForMultipleCameras = async () => {
@@ -330,12 +390,49 @@ const App: React.FC = () => {
                 aria-label="Animation prompt"
               />
             </div>
+            <div className="animation-controls flex flex-col gap-3 mb-4">
+              <div>
+                <label className="block text-sm text-gray-300 mb-1">
+                  Style Intensity: {styleIntensity.toFixed(1)}
+                </label>
+                <input
+                  type="range"
+                  min="0.1"
+                  max="2.0"
+                  step="0.1"
+                  value={styleIntensity}
+                  onChange={(e) => dispatch({ type: 'SET_STYLE_INTENSITY', payload: parseFloat(e.target.value)})}
+                  className="w-full accent-blue-500"
+                />
+                <div className="flex justify-between text-xs text-gray-500 mt-1">
+                  <span>Conservative</span>
+                  <span>Creative</span>
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-sm text-gray-300 mb-2">Quality</label>
+                <div className="flex gap-2">
+                  {(['fast', 'balanced', 'high'] as const).map(quality => (
+                    <button
+                      key={quality}
+                      onClick={() => dispatch({ type: 'SET_ANIMATION_QUALITY', payload: quality })}
+                      className={`px-3 py-1 text-xs rounded ${
+                        animationQuality === quality
+                          ? 'bg-blue-600 text-white'
+                          : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
+                      }`}
+                    >
+                      {quality.charAt(0).toUpperCase() + quality.slice(1)}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            </div>
             <FileUploadManager
               ref={fileUploadManagerRef}
               imageState={imageState}
               setImageState={(payload) => dispatch({ type: 'SET_IMAGE_STATE', payload })}
-              styleIntensity={styleIntensity}
-              setStyleIntensity={(payload) => dispatch({ type: 'SET_STYLE_INTENSITY', payload })}
               setStoryPrompt={(payload) => dispatch({ type: 'SET_STORY_PROMPT', payload })}
               setAppState={(payload) => dispatch({ type: 'SET_APP_STATUS', payload })}
               setLoadingMessage={(payload) => dispatch({ type: 'SET_LOADING_MESSAGE', payload })}
@@ -450,6 +547,13 @@ const App: React.FC = () => {
             styleImage={imageState.style}
             postProcessStrength={postProcessStrength}
             onPostProcessStrengthChange={(payload) => dispatch({ type: 'SET_POST_PROCESS_STRENGTH', payload })}
+            animationHistory={animationHistory}
+            onContinueStory={handleContinueStory}
+            onPreviousScene={() => {
+              const prevAnimation = animationHistory[animationHistory.length - 1];
+              dispatch({ type: 'SET_ANIMATION_HISTORY', payload: animationHistory.slice(0, -1) });
+              dispatch({ type: 'SET_ANIMATION_ASSETS', payload: prevAnimation });
+            }}
           />
         ) : null;
       case AppStatus.Error:

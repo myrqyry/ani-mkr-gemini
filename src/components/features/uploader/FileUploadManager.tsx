@@ -1,7 +1,7 @@
-import React, { useRef, useImperativeHandle, forwardRef } from 'react';
-import { AppState, ImageState } from '../../../types/types';
-import { analyzeAnimation } from '../../../services/geminiService';
-import { XCircleIcon } from '../../icons';
+import React, { useRef, useImperativeHandle, forwardRef, useState } from 'react';
+import { AppState, ImageState } from '@/src/types/types';
+import { analyzeAnimation } from '@/src/services/geminiService';
+import { XCircleIcon } from '@/components/icons';
 
 export interface FileUploadManagerHandles {
   handleUploadClick: () => void;
@@ -10,9 +10,7 @@ export interface FileUploadManagerHandles {
 
 interface FileUploadManagerProps {
   imageState: ImageState;
-  setImageState: React.Dispatch<React.SetStateAction<ImageState>>;
-  styleIntensity: number;
-  setStyleIntensity: (intensity: number) => void;
+  setImageState: (state: React.SetStateAction<ImageState>) => void;
   setStoryPrompt: (prompt: string) => void;
   setAppState: (state: AppState) => void;
   setLoadingMessage: (message: string) => void;
@@ -22,11 +20,9 @@ interface FileUploadManagerProps {
 const ALLOWED_IMAGE_TYPES = ['image/jpeg', 'image/png', 'image/webp', 'image/avif'];
 const ALLOWED_MOTION_TYPES = ['image/gif', 'image/webp', 'image/avif'];
 
-const FileUploadManager: React.FC<FileUploadManagerProps> = forwardRef<FileUploadManagerHandles, FileUploadManagerProps>(({
+const FileUploadManager = forwardRef<FileUploadManagerHandles, FileUploadManagerProps>(({
   imageState,
   setImageState,
-  styleIntensity,
-  setStyleIntensity,
   setStoryPrompt,
   setAppState,
   setLoadingMessage,
@@ -35,9 +31,9 @@ const FileUploadManager: React.FC<FileUploadManagerProps> = forwardRef<FileUploa
   const fileInputRef = useRef<HTMLInputElement>(null);
   const styleFileInputRef = useRef<HTMLInputElement>(null);
   const motionFileInputRef = useRef<HTMLInputElement>(null);
+  const [showStyleUpload, setShowStyleUpload] = useState(false);
 
   const handleUploadClick = () => fileInputRef.current?.click();
-  const handleUploadStyleClick = () => styleFileInputRef.current?.click();
   const handleUploadMotionClick = () => motionFileInputRef.current?.click();
 
   const handleMotionAnalysis = async (motionFile: File) => {
@@ -84,20 +80,15 @@ const FileUploadManager: React.FC<FileUploadManagerProps> = forwardRef<FileUploa
     }
   };
 
-  const handleStyleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    if (file && ALLOWED_IMAGE_TYPES.includes(file.type)) {
-      const reader = new FileReader();
-      reader.onloadend = () => setImageState(prev => ({...prev, style: reader.result as string}));
-      reader.onerror = () => {
-        console.error('Failed to read file');
-        setError('Failed to read the selected style image file.');
-        setAppState(AppState.Error);
-      };
-      reader.readAsDataURL(file);
-    } else {
-      setError('Please upload a valid image file (JPEG, PNG, WEBP, AVIF).');
-    }
+  const handleStyleImageUpload = (file: File) => {
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      setImageState(prev => ({
+        ...prev,
+        style: e.target?.result as string
+      }));
+    };
+    reader.readAsDataURL(file);
   };
 
   const handleMotionFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -187,11 +178,6 @@ const FileUploadManager: React.FC<FileUploadManagerProps> = forwardRef<FileUploa
     }
   };
 
-  const handleClearStyleImage = () => {
-    setImageState(prev => ({...prev, style: null}));
-    if (styleFileInputRef.current) styleFileInputRef.current.value = '';
-  };
-
   const handleClearMotionImage = () => {
     setImageState(prev => ({...prev, motion: null}));
     if (motionFileInputRef.current) motionFileInputRef.current.value = '';
@@ -206,61 +192,30 @@ const FileUploadManager: React.FC<FileUploadManagerProps> = forwardRef<FileUploa
     <>
       <div className="w-full mb-4 flex flex-col sm:flex-row gap-2">
         <div className="w-full sm:w-1/2">
-          <div className="relative w-full h-24 bg-[var(--color-surface)] border-2 border-dashed border-[var(--color-surface-alt)] rounded-lg flex items-center justify-center">
-            {imageState.style ? (
-              <>
-                <img src={imageState.style} alt="Style Preview" className="h-full w-full object-contain p-1" />
+            <div className="style-transfer-section">
                 <button
-                  onClick={handleClearStyleImage}
-                  className="absolute top-1 right-1 bg-black/50 p-1 rounded-full text-white hover:bg-black/75 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-black focus-visible:ring-[var(--color-accent)]"
-                  aria-label="Remove style image"
+                onClick={() => setShowStyleUpload(!showStyleUpload)}
+                className="text-sm text-blue-400 hover:text-blue-300"
                 >
-                  <XCircleIcon className="w-5 h-5" />
+                + Add Style Reference
                 </button>
-              </>
-            ) : (
-              <div className="text-center">
-                <p className="text-[var(--color-text-muted)] text-sm mb-2">Optionally, add a style</p>
-                <div className="flex justify-center gap-x-2">
-                  <button
-                    onClick={handleUploadStyleClick}
-                    className="bg-[var(--color-button)] text-white font-bold py-1 px-3 text-sm rounded-lg hover:bg-[var(--color-button-hover)] transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-black focus-visible:ring-[var(--color-accent)]"
-                  >
-                    Upload Style
-                  </button>
-                  <button
-                    onClick={() => handlePasteUrl('style')}
-                    className="bg-[var(--color-button)] text-white font-bold py-1 px-3 text-sm rounded-lg hover:bg-[var(--color-button-hover)] transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-black focus-visible:ring-[var(--color-accent)]"
-                  >
-                    URL
-                  </button>
+
+                {showStyleUpload && (
+                <div className="mt-2 p-3 border border-gray-600 rounded">
+                    <label className="block text-sm mb-2">Style Reference Image</label>
+                    <input
+                    type="file"
+                    ref={styleFileInputRef}
+                    accept="image/*"
+                    onChange={(e) => e.target.files?.[0] && handleStyleImageUpload(e.target.files[0])}
+                    className="w-full"
+                    />
+                    <p className="text-xs text-gray-400 mt-1">
+                    Upload an artwork or photo whose style you want to apply to your animation
+                    </p>
                 </div>
-              </div>
-            )}
-          </div>
-          {imageState.style && (
-            <div className="mt-2 px-1">
-              <label htmlFor="styleIntensity" className="block text-sm font-medium text-[var(--color-text-muted)]">
-                Style Intensity
-              </label>
-              <div className="flex items-center gap-3 mt-1">
-                <input
-                  id="styleIntensity"
-                  type="range"
-                  min="0"
-                  max="100"
-                  step="1"
-                  value={styleIntensity}
-                  onChange={e => setStyleIntensity(Number(e.target.value))}
-                  className="w-full h-2 bg-[var(--color-surface-alt)] rounded-lg appearance-none cursor-pointer accent-[var(--color-accent)]"
-                  aria-label="Style intensity"
-                />
-                <span className="w-16 text-center text-sm bg-[var(--color-button)] rounded-md py-1">
-                  {styleIntensity}%
-                </span>
-              </div>
+                )}
             </div>
-          )}
         </div>
         <div className="w-full sm:w-1/2">
           <div className="relative w-full h-24 bg-[var(--color-surface)] border-2 border-dashed border-[var(--color-surface-alt)] rounded-lg flex items-center justify-center">
@@ -301,13 +256,6 @@ const FileUploadManager: React.FC<FileUploadManagerProps> = forwardRef<FileUploa
         type="file"
         ref={fileInputRef}
         onChange={handleFileChange}
-        className="hidden"
-        accept="image/png, image/jpeg, image/webp, image/avif"
-      />
-      <input
-        type="file"
-        ref={styleFileInputRef}
-        onChange={handleStyleFileChange}
         className="hidden"
         accept="image/png, image/jpeg, image/webp, image/avif"
       />

@@ -5,10 +5,11 @@
 
 
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { AnimationAssets, BoundingBox } from '../services/geminiService';
-import { Frame } from '../types';
-import BananaLoader from './BananaLoader';
-import { InfoIcon, XCircleIcon, SettingsIcon, LoaderIcon, WandIcon } from './icons';
+import { AnimationAssets, BoundingBox } from '@/src/services/geminiService';
+import { Frame } from '@/src/types/types';
+import BananaLoader from '@/components/BananaLoader';
+import { InfoIcon, XCircleIcon, SettingsIcon, LoaderIcon, WandIcon } from '@/components/icons';
+import ExportModal from '@/components/ExportModal';
 
 // Add declaration for the gifshot library loaded from CDN
 declare var gifshot: any;
@@ -32,6 +33,9 @@ interface AnimationPlayerProps {
   styleImage: string | null;
   postProcessStrength: number;
   onPostProcessStrengthChange: (strength: number) => void;
+  animationHistory: AnimationAssets[];
+  onContinueStory: () => void;
+  onPreviousScene: () => void;
 }
 
 interface AnimationConfig {
@@ -180,13 +184,29 @@ const tensorToImage = async (tensor: any, originalWidth: number, originalHeight:
     });
 };
 
-const AnimationPlayer: React.FC<AnimationPlayerProps> = ({ assets, frameCount, onRegenerate, onBack, onPostProcess, error, clearError, styleImage, onDetectObjects, detectedObjects, postProcessStrength, onPostProcessStrengthChange }) => {
+const AnimationPlayer: React.FC<AnimationPlayerProps> = ({
+  assets,
+  frameCount,
+  onRegenerate,
+  onBack,
+  onPostProcess,
+  error,
+  clearError,
+  styleImage,
+  onDetectObjects,
+  detectedObjects,
+  postProcessStrength,
+  onPostProcessStrengthChange,
+  animationHistory,
+  onContinueStory,
+  onPreviousScene,
+}) => {
   const [frames, setFrames] = useState<HTMLImageElement[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [isExporting, setIsExporting] = useState(false);
   const [isSharing, setIsSharing] = useState(false);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [showControls, setShowControls] = useState(false);
+  const [isExportModalOpen, setIsExportModalOpen] = useState(false);
   const [config, setConfig] = useState<AnimationConfig>({
     ...DEFAULT_CONFIG,
     speed: assets.frameDuration || DEFAULT_CONFIG.speed,
@@ -199,7 +219,7 @@ const AnimationPlayer: React.FC<AnimationPlayerProps> = ({ assets, frameCount, o
   const containerRef = useRef<HTMLDivElement>(null);
   const overlayCanvasRef = useRef<HTMLCanvasElement>(null);
   const [displayFrames, setDisplayFrames] = useState<Frame[]>([]);
-  const [pendingAction, setPendingAction] = useState<'export' | 'share' | null>(null);
+  const [pendingAction, setPendingAction] = useState<'share' | null>(null);
   const [magicEditPrompt, setMagicEditPrompt] = useState<string>('');
 
   // State for ONNX-based frame interpolation
@@ -261,38 +281,6 @@ const AnimationPlayer: React.FC<AnimationPlayerProps> = ({ assets, frameCount, o
         setIsInterpolating(false);
     }
   };
-  
-  const performExport = useCallback(() => {
-    const framesToExport = interpolatedFrames || frames;
-    if (framesToExport.length === 0 || !canvasRef.current) return;
-    setIsExporting(true);
-
-    const imageUrls = framesToExport.map(frame => frame.src);
-    const speedToUse = interpolatedFrames ? config.speed / 2 : config.speed;
-    const intervalInSeconds = speedToUse / 1000;
-    const gifWidth = canvasRef.current.width;
-    const gifHeight = canvasRef.current.height;
-
-    gifshot.createGIF({
-        images: imageUrls,
-        gifWidth: gifWidth,
-        gifHeight: gifHeight,
-        interval: intervalInSeconds,
-        numWorkers: 2,
-    }, (obj: { error: boolean; image: string; errorMsg: string }) => {
-        setIsExporting(false);
-        if (!obj.error) {
-            const a = document.createElement('a');
-            a.href = obj.image;
-            a.download = 'animation.gif';
-            document.body.appendChild(a);
-            a.click();
-            document.body.removeChild(a);
-        } else {
-            console.error('GIF export failed:', obj.errorMsg);
-        }
-    });
-  }, [frames, config.speed, interpolatedFrames]);
 
   const performShare = useCallback(async () => {
     const framesToShare = interpolatedFrames || frames;
@@ -343,14 +331,12 @@ const AnimationPlayer: React.FC<AnimationPlayerProps> = ({ assets, frameCount, o
     // If a pending action is set and we are now in animation mode,
     // the canvas should be available to use.
     if (pendingAction && viewMode === 'animation' && canvasRef.current) {
-        if (pendingAction === 'export') {
-            performExport();
-        } else if (pendingAction === 'share') {
+        if (pendingAction === 'share') {
             performShare();
         }
         setPendingAction(null);
     }
-  }, [pendingAction, viewMode, performExport, performShare]);
+  }, [pendingAction, viewMode, performShare]);
 
   useEffect(() => {
     if (!assets.imageData || !assets.imageData.data) {
@@ -593,16 +579,6 @@ const AnimationPlayer: React.FC<AnimationPlayerProps> = ({ assets, frameCount, o
     };
   }, [viewMode, spriteSheetImage, displayFrames, getImageDisplayDimensions, detectedObjects]);
 
-
- const handleExport = () => {
-    if (viewMode === 'spritesheet') {
-        setViewMode('animation');
-        setPendingAction('export');
-    } else {
-        performExport();
-    }
- };
- 
   const handleShare = () => {
     if (viewMode === 'spritesheet') {
         setViewMode('animation');
@@ -788,11 +764,35 @@ const AnimationPlayer: React.FC<AnimationPlayerProps> = ({ assets, frameCount, o
         </div>
     </div>
 
-    <div className={`grid ${isShareAvailable ? 'grid-cols-2 sm:grid-cols-4' : 'grid-cols-3'} gap-2 w-full max-w-lg mb-4`}>
+    <div className="sequence-controls mt-4 text-center">
+      {animationHistory.length > 0 && (
+        <button
+          onClick={onPreviousScene}
+          className="px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded mr-2"
+        >
+          ← Previous Scene
+        </button>
+      )}
+
+      <button
+        onClick={onContinueStory}
+        className="px-4 py-2 bg-purple-600 hover:bg-purple-700 rounded"
+      >
+        Continue Story →
+      </button>
+
+      {animationHistory.length > 0 && (
+        <div className="mt-2 text-sm text-gray-400">
+          Scene {animationHistory.length + 1} of sequence
+        </div>
+      )}
+    </div>
+
+    <div className={`grid ${isShareAvailable ? 'grid-cols-2 sm:grid-cols-4' : 'grid-cols-3'} gap-2 w-full max-w-lg my-4`}>
         <button onClick={onBack} className="bg-[var(--color-button)] text-white font-bold py-2 px-4 rounded-lg hover:bg-[var(--color-button-hover)] transition-colors duration-200 flex items-center justify-center focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-black focus-visible:ring-[var(--color-accent)]">Edit</button>
         <button onClick={onRegenerate} className="bg-[var(--color-danger)] text-white font-bold py-2 px-4 rounded-lg hover:opacity-90 transition-opacity duration-200 flex items-center justify-center focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-black focus-visible:ring-[var(--color-accent)]">Regenerate</button>
-        <button onClick={handleExport} disabled={isExporting} className="bg-[var(--color-success)] text-white font-bold py-2 px-4 rounded-lg hover:bg-[var(--color-success-hover)] transition-colors duration-200 flex items-center justify-center disabled:opacity-50 disabled:cursor-not-allowed focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-black focus-visible:ring-[var(--color-accent)]">
-            {isExporting ? 'Exporting...' : 'Export GIF'}
+        <button onClick={() => setIsExportModalOpen(true)} className="bg-[var(--color-success)] text-white font-bold py-2 px-4 rounded-lg hover:bg-[var(--color-success-hover)] transition-colors duration-200 flex items-center justify-center disabled:opacity-50 disabled:cursor-not-allowed focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-black focus-visible:ring-[var(--color-accent)]">
+            Export
         </button>
         {isShareAvailable && (
             <button onClick={handleShare} disabled={isSharing} className="bg-[var(--color-info)] text-white font-bold py-2 px-4 rounded-lg hover:bg-[var(--color-info-hover)] transition-colors duration-200 flex items-center justify-center disabled:opacity-50 disabled:cursor-not-allowed focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-black focus-visible:ring-[var(--color-accent)]">
@@ -800,6 +800,12 @@ const AnimationPlayer: React.FC<AnimationPlayerProps> = ({ assets, frameCount, o
             </button>
         )}
     </div>
+    <ExportModal
+        isOpen={isExportModalOpen}
+        onClose={() => setIsExportModalOpen(false)}
+        assets={assets}
+        frameCount={frameCount}
+    />
     </div>
   );
 };

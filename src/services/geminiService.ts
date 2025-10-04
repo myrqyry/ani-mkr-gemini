@@ -6,23 +6,14 @@
 
 
 import { GoogleGenAI, GenerateContentResponse, Modality } from "@google/genai";
-import { Frame } from "../types";
-import { buildAnalysisPrompt } from "../../prompts";
+import { Frame, AnimationAssets, BoundingBox } from "@/src/types/types";
+import { buildAnalysisPrompt } from "@/prompts";
+import { APIRateLimiter } from "@/src/utils/apiUtils";
 
 const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+const rateLimiter = new APIRateLimiter();
 const imageModel = 'gemini-2.5-flash-image-preview';
 const textModel = 'gemini-2.5-flash';
-
-export interface AnimationAssets {
-  imageData: { data: string, mimeType: string };
-  frames: Frame[];
-  frameDuration: number;
-}
-
-export interface BoundingBox {
-  box_2d: [number, number, number, number]; // ymin, xmin, ymax, xmax
-  label: string;
-}
 
 const base64ToGenerativePart = (base64: string, mimeType: string) => {
     return {
@@ -71,35 +62,42 @@ const parseGeminiResponse = (response: GenerateContentResponse): AnimationAssets
 export const generateAnimationAssets = async (
     base64UserImage: string | null,
     mimeType: string | null,
+    base64StyleImage: string | null,
+    styleMimeType: string | null,
     imagePrompt: string,
-    onProgress: (message: string) => void
+    onProgress: (message: string) => void,
+    styleIntensity?: number,
 ): Promise<AnimationAssets | null> => {
-  try {
-    const imageGenTextPart = { text: imagePrompt };
-    const parts = [];
+  return rateLimiter.enqueue(async () => {
+    try {
+      const parts = [];
 
-    if (base64UserImage && mimeType) {
-        const userImagePart = base64ToGenerativePart(base64UserImage, mimeType);
-        parts.push(userImagePart);
+      if (base64UserImage && mimeType) {
+          parts.push(base64ToGenerativePart(base64UserImage, mimeType));
+      }
+
+      if (base64StyleImage && styleMimeType) {
+          parts.push(base64ToGenerativePart(base64StyleImage, styleMimeType));
+          imagePrompt = `Style Transfer Request: Use the first image as content and the second image as style reference. ${imagePrompt}. Maintain the composition of the first image while applying the artistic style, colors, and textures from the second image.`;
+      }
+
+      parts.push({ text: imagePrompt });
+
+      const response = await ai.models.generateContent({
+          model: imageModel,
+          contents: [{ role: "user", parts: parts }],
+          config: {
+              responseModalities: [Modality.IMAGE, Modality.TEXT],
+              temperature: styleIntensity || 0.7
+          },
+      });
+
+      return parseGeminiResponse(response);
+    } catch (error) {
+      console.error("Error during asset generation:", error);
+      throw new Error(`Failed to process image. ${error instanceof Error ? error.message : ''}`);
     }
-    parts.push(imageGenTextPart);
-    
-    const imageGenResponse: GenerateContentResponse = await ai.models.generateContent({
-        model: imageModel,
-        contents: [{
-            role: "user",
-            parts: parts,
-        }],
-        config: {
-            responseModalities: [Modality.IMAGE, Modality.TEXT],
-        },
-    });
-
-    return parseGeminiResponse(imageGenResponse);
-  } catch (error) {
-    console.error("Error during asset generation:", error);
-    throw new Error(`Failed to process image. ${error instanceof Error ? error.message : ''}`);
-  }
+  });
 };
 
 

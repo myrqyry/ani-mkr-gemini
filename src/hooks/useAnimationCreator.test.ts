@@ -18,6 +18,7 @@ describe('useAnimationCreator', () => {
 
     vi.mocked(geminiService.generateAnimationAssets).mockResolvedValue({
       imageData: { data: 'mock_image_data', mimeType: 'image/jpeg' },
+      frames: [],
       frameDuration: 100,
     });
     vi.mocked(imageUtils.resizeImage).mockResolvedValue({
@@ -29,6 +30,7 @@ describe('useAnimationCreator', () => {
       { original: 'test_image', style: null, motion: null },
       'test prompt',
       9,
+      0.7, // styleIntensity
       setAppState,
       setLoadingMessage,
       setError,

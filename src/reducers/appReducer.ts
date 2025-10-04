@@ -1,4 +1,4 @@
-import { AppState, AppAction, AppStatus } from '../types/types';
+import { AppState, AppAction, AppStatus } from '@/src/types/types';
 
 export const initialState: AppState = {
   appStatus: AppStatus.Capturing,
@@ -7,8 +7,11 @@ export const initialState: AppState = {
     style: null,
     motion: null,
   },
-  styleIntensity: 100,
+  styleIntensity: 0.7,
+  animationQuality: 'balanced',
   animationAssets: null,
+  animationHistory: [],
+  currentSequenceId: null,
   detectedObjects: null,
   loadingMessage: '',
   error: null,
@@ -51,6 +54,12 @@ export const appReducer = (state: AppState, action: AppAction): AppState => {
       return { ...state, hasMultipleCameras: action.payload };
     case 'SET_IS_CAMERA_OPEN':
       return { ...state, isCameraOpen: action.payload };
+    case 'SET_ANIMATION_QUALITY':
+      return { ...state, animationQuality: action.payload };
+    case 'SET_ANIMATION_HISTORY':
+      return { ...state, animationHistory: action.payload };
+    case 'SET_CURRENT_SEQUENCE_ID':
+      return { ...state, currentSequenceId: action.payload };
     default:
       return state;
   }

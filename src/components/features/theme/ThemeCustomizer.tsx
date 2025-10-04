@@ -1,7 +1,7 @@
 import React, { useRef } from 'react';
-import { Theme } from '../../../types/types';
-import { THEMES, EDITABLE_THEME_PROPERTIES, THEME_PALETTES } from '../../../constants/theme';
-import { XCircleIcon, UploadIcon, DownloadIcon } from '../../icons';
+import { Theme } from '@/src/types/types';
+import { THEMES, EDITABLE_THEME_PROPERTIES, THEME_PALETTES } from '@/src/constants/theme';
+import { XCircleIcon, UploadIcon, DownloadIcon } from '@/components/icons';
 
 interface ThemeCustomizerProps {
   /** The current theme. */

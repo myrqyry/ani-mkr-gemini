@@ -1,14 +1,15 @@
 import { useCallback, useRef } from 'react';
-import { AppStatus, ImageState, AnimationAssets } from '../types/types';
-import { generateAnimationAssets } from '../services/geminiService';
-import { buildCreativeInstruction, promptSuggestions } from '../../prompts';
-import { resizeImage } from '../utils/image';
-import { MAIN_IMAGE_MAX_SIZE } from '../constants/app';
+import { AppStatus, ImageState, AnimationAssets } from '@/src/types/types';
+import { generateAnimationAssets } from '@/src/services/geminiService';
+import { buildCreativeInstruction, promptSuggestions } from '@/prompts';
+import { resizeImage } from '@/src/utils/image';
+import { MAIN_IMAGE_MAX_SIZE } from '@/src/constants/app';
 
 export const useAnimationCreator = (
   imageState: ImageState,
   storyPrompt: string,
   frameCount: number,
+  styleIntensity: number,
   setAppState: React.Dispatch<React.SetStateAction<AppStatus>>,
   setLoadingMessage: React.Dispatch<React.SetStateAction<string>>,
   setError: React.Dispatch<React.SetStateAction<string | null>>,
@@ -56,6 +57,8 @@ export const useAnimationCreator = (
 
     let base64Image: string | null = null;
     let mimeType: string | null = null;
+    let base64StyleImage: string | null = null;
+    let styleMimeType: string | null = null;
 
     try {
       if (imageState.original) {
@@ -69,11 +72,25 @@ export const useAnimationCreator = (
         base64Image = imageParts[1];
       }
 
+      if (imageState.style) {
+        setLoadingMessage('Optimizing style image...');
+        const { dataUrl: resizedDataUrl, mime: resizedMime } = await resizeImage(imageState.style, { maxSize: MAIN_IMAGE_MAX_SIZE });
+        const imageParts = resizedDataUrl.match(/^data:.*?;base64,(.*)$/);
+        if (!imageParts || imageParts.length !== 2) {
+            throw new Error("Could not process the resized style image data.");
+        }
+        styleMimeType = resizedMime;
+        base64StyleImage = imageParts[1];
+      }
+
       const generatedAsset = await generateAnimationAssets(
         base64Image,
         mimeType,
+        base64StyleImage,
+        styleMimeType,
         finalCreativeInstruction,
-        (message: string) => setLoadingMessage(message)
+        (message: string) => setLoadingMessage(message),
+        styleIntensity,
       );
 
       if (!generatedAsset || !generatedAsset.imageData.data) {
@@ -87,7 +104,7 @@ export const useAnimationCreator = (
       setError(err instanceof Error ? err.message : 'An unknown error occurred.');
       setAppState(AppStatus.Capturing);
     }
-  }, [storyPrompt, imageState.original, frameCount, setAppState, setLoadingMessage, setError, setAnimationAssets, setStoryPrompt]);
+  }, [storyPrompt, imageState, frameCount, styleIntensity, setAppState, setLoadingMessage, setError, setAnimationAssets, setStoryPrompt]);
 
   return { handleCreateAnimation };
 };
