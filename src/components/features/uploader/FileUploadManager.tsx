@@ -1,5 +1,5 @@
 import React, { useRef, useImperativeHandle, forwardRef } from 'react';
-import { AppState, ImageState } from '../../../types/types';
+import { AppStatus, ImageState } from '../../../types/types';
 import { analyzeAnimation } from '../../../services/geminiService';
 import { XCircleIcon } from '../../icons';
 
@@ -14,7 +14,7 @@ interface FileUploadManagerProps {
   styleIntensity: number;
   setStyleIntensity: (intensity: number) => void;
   setStoryPrompt: (prompt: string) => void;
-  setAppState: (state: AppState) => void;
+  setAppState: (state: AppStatus) => void;
   setLoadingMessage: (message: string) => void;
   setError: (error: string | null) => void;
 }
@@ -41,7 +41,7 @@ const FileUploadManager: React.FC<FileUploadManagerProps> = forwardRef<FileUploa
   const handleUploadMotionClick = () => motionFileInputRef.current?.click();
 
   const handleMotionAnalysis = async (motionFile: File) => {
-    setAppState(AppState.Processing);
+    setAppState(AppStatus.Processing);
     setLoadingMessage('Analyzing animation...');
     setError(null);
 
@@ -64,7 +64,7 @@ const FileUploadManager: React.FC<FileUploadManagerProps> = forwardRef<FileUploa
       console.error(err);
       setError(errorMessage);
     } finally {
-      setAppState(AppState.Capturing);
+      setAppState(AppStatus.Capturing);
     }
   };
 
@@ -76,7 +76,7 @@ const FileUploadManager: React.FC<FileUploadManagerProps> = forwardRef<FileUploa
       reader.onerror = () => {
         console.error('Failed to read file');
         setError('Failed to read the selected image file.');
-        setAppState(AppState.Error);
+        setAppState(AppStatus.Error);
       };
       reader.readAsDataURL(file);
     } else {
@@ -92,7 +92,7 @@ const FileUploadManager: React.FC<FileUploadManagerProps> = forwardRef<FileUploa
       reader.onerror = () => {
         console.error('Failed to read file');
         setError('Failed to read the selected style image file.');
-        setAppState(AppState.Error);
+        setAppState(AppStatus.Error);
       };
       reader.readAsDataURL(file);
     } else {
@@ -132,7 +132,7 @@ const FileUploadManager: React.FC<FileUploadManagerProps> = forwardRef<FileUploa
       return;
     }
 
-    setAppState(AppState.Processing);
+    setAppState(AppStatus.Processing);
     setLoadingMessage('Fetching image from URL...');
     setError(null);
 
@@ -147,21 +147,21 @@ const FileUploadManager: React.FC<FileUploadManagerProps> = forwardRef<FileUploa
         if (type === 'main') {
           if (!ALLOWED_IMAGE_TYPES.includes(blob.type)) {
             setError('Please provide a URL for a static image (JPEG, PNG, WEBP, AVIF).');
-            setAppState(AppState.Capturing);
+            setAppState(AppStatus.Capturing);
             return;
           }
           setImageState(prev => ({...prev, original: dataUrl}));
         } else if (type === 'style') {
           if (!ALLOWED_IMAGE_TYPES.includes(blob.type)) {
             setError('Please provide a URL for an image file (JPEG, PNG, WEBP, AVIF).');
-            setAppState(AppState.Capturing);
+            setAppState(AppStatus.Capturing);
             return;
           }
           setImageState(prev => ({...prev, style: dataUrl}));
         } else if (type === 'motion') {
           if (!ALLOWED_MOTION_TYPES.includes(blob.type)) {
             setError('Please provide a URL for a GIF, WEBP, or AVIF file for motion analysis.');
-            setAppState(AppState.Capturing);
+            setAppState(AppStatus.Capturing);
             return;
           }
           setImageState(prev => ({...prev, motion: dataUrl}));
@@ -170,7 +170,7 @@ const FileUploadManager: React.FC<FileUploadManagerProps> = forwardRef<FileUploa
           handleMotionAnalysis(file);
           return;
         }
-        setAppState(AppState.Capturing);
+        setAppState(AppStatus.Capturing);
       };
 
       reader.onerror = () => {
@@ -183,7 +183,7 @@ const FileUploadManager: React.FC<FileUploadManagerProps> = forwardRef<FileUploa
       const errorMessage = err instanceof Error ? err.message : 'An unknown error occurred.';
       const corsErrorHint = errorMessage.toLowerCase().includes('failed to fetch') ? "This might be due to a network error or the server's CORS policy preventing direct access. " : '';
       setError(`Could not fetch image from URL. ${corsErrorHint}Please try a different URL. Error: ${errorMessage}`);
-      setAppState(AppState.Capturing);
+      setAppState(AppStatus.Capturing);
     }
   };
 
