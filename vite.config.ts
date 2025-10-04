@@ -17,6 +17,8 @@ export default defineConfig(({ mode }) => {
       resolve: {
         alias: {
           '@': path.resolve(__dirname, '.'),
+          'src': path.resolve(__dirname, 'src'),
+          'prompts': path.resolve(__dirname, 'prompts.ts'),
         }
       }
     };
