@@ -22,6 +22,7 @@ import { useAnimationCreator } from 'src/hooks/useAnimationCreator';
 import { useObjectDetection } from 'src/hooks/useObjectDetection';
 import { usePostProcessing } from 'src/hooks/usePostProcessing';
 import { appReducer, initialState } from 'src/reducers/appReducer';
+import { categorizeError, getErrorTitle } from 'src/utils/errorHandler';
 import {
   FRAME_COUNTS,
   TYPING_ANIMATION_TEXT,
@@ -341,21 +342,52 @@ const App: React.FC = () => {
               setLoadingMessage={(payload) => dispatch({ type: 'SET_LOADING_MESSAGE', payload })}
               setError={(payload) => dispatch({ type: 'SET_ERROR', payload })}
             />
-            {error && (
-              <div className="w-full bg-[var(--color-danger-surface)] border border-[var(--color-danger)] text-[var(--color-danger-text)] px-4 py-3 rounded-lg relative mb-4 flex items-center justify-between animate-shake" role="alert">
-                <div className="pr-4">
-                  <strong className="font-bold block">Ohoh Bananimate couldn't Bananimate that one. Try again possibly with a new image and prompt ...?</strong>
-                  <span className="text-sm block mt-1">{error}</span>
+            {error && (() => {
+              const errorInfo = categorizeError(error);
+              const errorTitle = getErrorTitle(errorInfo);
+              return (
+                <div className="w-full bg-[var(--color-danger-surface)] border border-[var(--color-danger)] text-[var(--color-danger-text)] px-4 py-3 rounded-lg relative mb-4 animate-shake" role="alert">
+                  <div className="flex items-start justify-between">
+                    <div className="flex-1 pr-4">
+                      <strong className="font-bold block">{errorTitle}</strong>
+                      {errorInfo.suggestion && (
+                        <span className="text-sm block mt-1">{errorInfo.suggestion}</span>
+                      )}
+                      <details className="mt-2">
+                        <summary className="text-xs cursor-pointer hover:underline">Technical details</summary>
+                        <pre className="text-xs mt-1 whitespace-pre-wrap break-words">{errorInfo.message}</pre>
+                      </details>
+                    </div>
+                    <button
+                      onClick={() => dispatch({ type: 'SET_ERROR', payload: null })}
+                      className="p-1 -mr-2 flex-shrink-0"
+                      aria-label="Close error message"
+                    >
+                      <XCircleIcon className="w-6 h-6" />
+                    </button>
+                  </div>
+                  {errorInfo.canRetry && (
+                    <div className="mt-3 flex gap-2">
+                      <button
+                        onClick={() => {
+                          dispatch({ type: 'SET_ERROR', payload: null });
+                          handleCreateAnimation();
+                        }}
+                        className="bg-[var(--color-accent)] text-white font-semibold py-2 px-4 rounded hover:bg-[var(--color-accent-hover)] transition-colors duration-300 text-sm"
+                      >
+                        Try Again
+                      </button>
+                      <button
+                        onClick={() => dispatch({ type: 'SET_ERROR', payload: null })}
+                        className="bg-[var(--color-surface)] text-[var(--color-text-base)] font-semibold py-2 px-4 rounded hover:bg-[var(--color-surface-hover)] transition-colors duration-300 text-sm border border-[var(--color-border)]"
+                      >
+                        Dismiss
+                      </button>
+                    </div>
+                  )}
                 </div>
-                <button
-                  onClick={() => dispatch({ type: 'SET_ERROR', payload: null })}
-                  className="p-1 -mr-2 flex-shrink-0 self-start"
-                  aria-label="Close error message"
-                >
-                  <XCircleIcon className="w-6 h-6" />
-                </button>
-              </div>
-            )}
+              );
+            })()}
             
             <div className="relative w-full [@media(max-height:750px)]:w-96 [@media(max-height:650px)]:w-72 aspect-square bg-[var(--color-surface)] rounded-lg overflow-hidden shadow-2xl flex items-center justify-center">
               {imageState.original ? (
