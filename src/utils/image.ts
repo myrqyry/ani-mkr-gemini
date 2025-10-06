@@ -36,6 +36,8 @@ export async function resizeImage(
     sw = srcW,
     sh = srcH;
 
+  let targetW: number, targetH: number;
+
   if (squareCrop) {
     if (srcW > srcH) {
       sw = srcH;
@@ -44,10 +46,18 @@ export async function resizeImage(
       sh = srcW;
       sy = Math.floor((srcH - srcW) / 2);
     }
+    targetW = maxSize;
+    targetH = maxSize;
+  } else {
+    // If not square cropping, calculate new dimensions to preserve aspect ratio
+    if (srcW > srcH) {
+      targetW = maxSize;
+      targetH = Math.round(maxSize * (srcH / srcW));
+    } else {
+      targetH = maxSize;
+      targetW = Math.round(maxSize * (srcW / srcH));
+    }
   }
-
-  const targetW = maxSize;
-  const targetH = maxSize;
 
   const canvas = document.createElement('canvas');
   canvas.width = targetW;

@@ -53,8 +53,8 @@ describe('AnimationPlayer component', () => {
             />
         );
 
-        // Wait for the loader to disappear
-        await screen.findByText('Export GIF');
+        // Wait for the animation canvas to be ready
+        await screen.findByTestId('animation-canvas');
 
         const exportButton = screen.getByText('Export GIF');
         fireEvent.click(exportButton);

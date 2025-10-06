@@ -683,7 +683,7 @@ const AnimationPlayer: React.FC<AnimationPlayerProps> = ({ assets, frameCount, o
               </div>
 
               {viewMode === 'animation' && (
-                <canvas ref={canvasRef} className={'w-full aspect-square object-contain'} />
+                <canvas ref={canvasRef} className={'w-full aspect-square object-contain'} data-testid="animation-canvas" />
               )}
               {viewMode === 'spritesheet' && spriteSheetImage && (
                 <>
