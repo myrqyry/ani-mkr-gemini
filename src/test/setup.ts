@@ -36,6 +36,16 @@ Object.defineProperty(window.HTMLCanvasElement.prototype, 'toDataURL', {
 });
 
 
+// Mock URL.createObjectURL
+Object.defineProperty(global.URL, 'createObjectURL', {
+  writable: true,
+  value: vi.fn((blob: Blob) => `blob:${blob.size}`),
+});
+Object.defineProperty(global.URL, 'revokeObjectURL', {
+  writable: true,
+  value: vi.fn(),
+});
+
 // runs a cleanup after each test case (e.g. clearing jsdom)
 afterEach(() => {
   cleanup();
