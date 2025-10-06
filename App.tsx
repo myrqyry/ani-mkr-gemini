@@ -35,7 +35,7 @@ import {
 // --- FEATURE FLAGS ---
 // Set to `true` to make uploading or capturing an image mandatory to create an animation.
 // Set to `false` to allow creating animations from only a text prompt.
-const REQUIRE_IMAGE_FOR_ANIMATION = true;
+const REQUIRE_IMAGE_FOR_ANIMATION = false;
 
 // Set to `true` to allow selecting multiple emoji suggestions to combine prompts.
 // Set to `false` to only allow one emoji suggestion to be active at a time.
