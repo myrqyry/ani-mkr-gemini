@@ -27,6 +27,10 @@ Object.defineProperty(window.HTMLCanvasElement.prototype, 'getContext', {
   writable: true,
   value: () => ({
     drawImage: vi.fn(),
+    getImageData: vi.fn(() => ({
+      data: new Uint8ClampedArray(40000), // Mock data for a 100x100 canvas
+    })),
+    putImageData: vi.fn(),
   }),
 });
 

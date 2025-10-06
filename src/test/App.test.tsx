@@ -1,7 +1,8 @@
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { describe, it, expect, vi } from 'vitest';
-import App from './App';
-import { promptSuggestions } from './prompts';
+import App from '@/App';
+import { promptSuggestions } from 'prompts';
+import { TYPING_ANIMATION_TEXT } from 'src/constants/app';
 
 // Mocking navigator.mediaDevices
 Object.defineProperty(navigator, 'mediaDevices', {
@@ -43,6 +44,37 @@ describe('App component', () => {
 
     await waitFor(() => {
         expect(storyPromptTextarea.value).toBe(secondSuggestion.prompt);
+    });
+  });
+
+  it('should not restart typing animation on rapid focus/blur when there is content', async () => {
+    render(<App />);
+
+    const storyPromptTextarea = screen.getByRole('textbox', { name: 'Animation prompt' }) as HTMLTextAreaElement;
+
+    // Initially, placeholder should be visible.
+    await waitFor(() => {
+      expect(screen.getByTestId('placeholder-text')).toBeInTheDocument();
+    });
+
+    // Also check for the animated cursor which is a good sign the effect is running.
+    await screen.findByText('|');
+
+    // Type something into the textarea
+    fireEvent.change(storyPromptTextarea, { target: { value: 'A test prompt' } });
+
+    // After typing, the placeholder should disappear.
+    await waitFor(() => {
+      expect(screen.queryByTestId('placeholder-text')).not.toBeInTheDocument();
+    });
+
+    // Simulate rapid focus and blur
+    fireEvent.focus(storyPromptTextarea);
+    fireEvent.blur(storyPromptTextarea);
+
+    // After blur, the placeholder should still not be visible because there is content.
+    await waitFor(() => {
+        expect(screen.queryByTestId('placeholder-text')).not.toBeInTheDocument();
     });
   });
 });
