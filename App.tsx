@@ -39,7 +39,7 @@ const REQUIRE_IMAGE_FOR_ANIMATION = true;
 
 // Set to `true` to allow selecting multiple emoji suggestions to combine prompts.
 // Set to `false` to only allow one emoji suggestion to be active at a time.
-const ALLOW_MULTIPLE_EMOJI_SELECTION = false;
+const ALLOW_MULTIPLE_EMOJI_SELECTION = true;
 
 interface TypingAnimationState {
   fullText: string;
@@ -241,10 +241,21 @@ const App: React.FC = () => {
   };
   
   const handleSuggestionClick = (prompt: string) => {
-    dispatch({
-      type: 'SET_STORY_PROMPT',
-      payload: storyPrompt === prompt ? '' : prompt,
-    });
+    if (ALLOW_MULTIPLE_EMOJI_SELECTION) {
+      const prompts = storyPrompt.split(', ').filter(p => p.trim() !== '');
+      const promptIndex = prompts.indexOf(prompt);
+      if (promptIndex > -1) {
+        prompts.splice(promptIndex, 1);
+      } else {
+        prompts.push(prompt);
+      }
+      dispatch({ type: 'SET_STORY_PROMPT', payload: prompts.join(', ') });
+    } else {
+      dispatch({
+        type: 'SET_STORY_PROMPT',
+        payload: storyPrompt === prompt ? '' : prompt,
+      });
+    }
   };
   
   const handlePrimaryAction = useCallback(() => {
