@@ -319,7 +319,7 @@ const App: React.FC = () => {
             <div className="w-full mb-2 relative">
               {/* A 'fake' placeholder is used because the native placeholder attribute doesn't support newlines. */}
               {!storyPrompt && !isPromptFocused && (
-                <div className="absolute top-0 left-0 px-4 py-3 text-[var(--color-text-muted)] text-lg pointer-events-none" aria-hidden="true">
+                <div data-testid="placeholder-text" className="absolute top-0 left-0 px-4 py-3 text-[var(--color-text-muted)] text-lg pointer-events-none" aria-hidden="true">
                   What would you like to <span className="text-[var(--color-warning)]">Bananimate</span>?<br />
                   <span className="text-[var(--color-text-subtle)]">
                     {typedPlaceholder}
@@ -337,7 +337,7 @@ const App: React.FC = () => {
                 onFocus={() => dispatch({ type: 'SET_IS_PROMPT_FOCUSED', payload: true })}
                 onBlur={() => {
                   // We add a small delay to allow click events on other elements to fire before the blur causes a layout shift.
-                  setTimeout(() => dispatch({ type: 'SET_IS_PROMPT_FOCUSED', payload: false }), 150);
+                  dispatch({ type: 'SET_IS_PROMPT_FOCUSED', payload: false });
                 }}
                 aria-label="Animation prompt"
               />
