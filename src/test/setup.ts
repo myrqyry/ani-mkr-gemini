@@ -31,6 +31,7 @@ Object.defineProperty(window.HTMLCanvasElement.prototype, 'getContext', {
       data: new Uint8ClampedArray(40000), // Mock data for a 100x100 canvas
     })),
     putImageData: vi.fn(),
+    clearRect: vi.fn(),
   }),
 });
 

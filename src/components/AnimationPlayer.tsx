@@ -263,6 +263,11 @@ const AnimationPlayer: React.FC<AnimationPlayerProps> = ({ assets, frameCount, o
   };
   
   const performExport = useCallback(() => {
+    // Fix: Add a guard to ensure the gifshot library is loaded before use.
+    if (typeof gifshot === 'undefined' || !gifshot) {
+      alert("The GIF exporter is still loading. Please wait a moment and try again.");
+      return;
+    }
     const framesToExport = interpolatedFrames || frames;
     if (framesToExport.length === 0 || !canvasRef.current) return;
     setIsExporting(true);
@@ -295,6 +300,11 @@ const AnimationPlayer: React.FC<AnimationPlayerProps> = ({ assets, frameCount, o
   }, [frames, config.speed, interpolatedFrames]);
 
   const performShare = useCallback(async () => {
+    // Fix: Add a guard to ensure the gifshot library is loaded before use.
+    if (typeof gifshot === 'undefined' || !gifshot) {
+      alert("The GIF exporter is still loading. Please wait a moment and try again.");
+      return;
+    }
     const framesToShare = interpolatedFrames || frames;
     if (!isShareAvailable || framesToShare.length === 0 || !canvasRef.current) return;
     setIsSharing(true);
