@@ -76,85 +76,121 @@ const FileUploadManager: React.FC<FileUploadManagerProps> = forwardRef<FileUploa
     const file = event.target.files?.[0];
     if (!file) return;
 
-    // Validate file
-    const validationResult = await validateImageFile(file);
-    if (!validationResult.valid) {
-      setError(validationResult.error || 'Invalid file');
-      return;
-    }
+    setError(null);
 
-    const reader = new FileReader();
-    reader.onloadend = async () => {
-      const dataUrl = reader.result as string;
-      
-      // Validate dimensions
-      const dimensionResult = await validateImageDimensions(dataUrl);
-      if (!dimensionResult.valid) {
-        setError(dimensionResult.error || 'Invalid image dimensions');
+    try {
+      // Validate file
+      const validationResult = await validateImageFile(file);
+      if (!validationResult.valid) {
+        setError(validationResult.error || 'Invalid file');
+        event.target.value = ''; // Reset input
         return;
       }
-      
-      setImageState(prev => ({...prev, original: dataUrl}));
-    };
-    reader.onerror = () => {
-      console.error('Failed to read file');
-      setError('Failed to read the selected image file.');
-      setAppState(AppStatus.Error);
-    };
-    reader.readAsDataURL(file);
+
+      const reader = new FileReader();
+      reader.onloadend = async () => {
+        const dataUrl = reader.result as string;
+        
+        // Validate dimensions
+        const dimensionResult = await validateImageDimensions(dataUrl);
+        if (!dimensionResult.valid) {
+          setError(dimensionResult.error || 'Invalid image dimensions');
+          event.target.value = ''; // Reset input
+          return;
+        }
+        
+        setImageState(prev => ({...prev, original: dataUrl}));
+        setError(null);
+      };
+      reader.onerror = () => {
+        console.error('Failed to read file');
+        setError('Failed to read the selected image file.');
+        event.target.value = ''; // Reset input
+      };
+      reader.readAsDataURL(file);
+    } catch (err) {
+      console.error('Error processing file:', err);
+      setError(err instanceof Error ? err.message : 'Failed to process the selected file.');
+      event.target.value = ''; // Reset input
+    }
   };
 
   const handleStyleFileChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (!file) return;
 
-    // Validate file
-    const validationResult = await validateImageFile(file);
-    if (!validationResult.valid) {
-      setError(validationResult.error || 'Invalid file');
-      return;
-    }
+    setError(null);
 
-    const reader = new FileReader();
-    reader.onloadend = async () => {
-      const dataUrl = reader.result as string;
-      
-      // Validate dimensions
-      const dimensionResult = await validateImageDimensions(dataUrl);
-      if (!dimensionResult.valid) {
-        setError(dimensionResult.error || 'Invalid image dimensions');
+    try {
+      // Validate file
+      const validationResult = await validateImageFile(file);
+      if (!validationResult.valid) {
+        setError(validationResult.error || 'Invalid file');
+        event.target.value = ''; // Reset input
         return;
       }
-      
-      setImageState(prev => ({...prev, style: dataUrl}));
-    };
-    reader.onerror = () => {
-      console.error('Failed to read file');
-      setError('Failed to read the selected style image file.');
-      setAppState(AppStatus.Error);
-    };
-    reader.readAsDataURL(file);
+
+      const reader = new FileReader();
+      reader.onloadend = async () => {
+        const dataUrl = reader.result as string;
+        
+        // Validate dimensions
+        const dimensionResult = await validateImageDimensions(dataUrl);
+        if (!dimensionResult.valid) {
+          setError(dimensionResult.error || 'Invalid image dimensions');
+          event.target.value = ''; // Reset input
+          return;
+        }
+        
+        setImageState(prev => ({...prev, style: dataUrl}));
+        setError(null);
+      };
+      reader.onerror = () => {
+        console.error('Failed to read file');
+        setError('Failed to read the selected style image file.');
+        event.target.value = ''; // Reset input
+      };
+      reader.readAsDataURL(file);
+    } catch (err) {
+      console.error('Error processing style file:', err);
+      setError(err instanceof Error ? err.message : 'Failed to process the selected style file.');
+      event.target.value = ''; // Reset input
+    }
   };
 
   const handleMotionFileChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (!file) return;
 
-    // Validate file
-    const validationResult = await validateMotionFile(file);
-    if (!validationResult.valid) {
-      setError(validationResult.error || 'Invalid file');
-      return;
-    }
+    setError(null);
 
-    const reader = new FileReader();
-    reader.onloadend = () => setImageState(prev => ({...prev, motion: reader.result as string}));
-    reader.onerror = () => {
-      console.error('Failed to read file for motion preview');
-      setError('Failed to read the selected motion file.');
-    };
-    reader.readAsDataURL(file);
-    handleMotionAnalysis(file);
+    try {
+      // Validate file
+      const validationResult = await validateMotionFile(file);
+      if (!validationResult.valid) {
+        setError(validationResult.error || 'Invalid file');
+        event.target.value = ''; // Reset input
+        return;
+      }
+
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setImageState(prev => ({...prev, motion: reader.result as string}));
+        setError(null);
+      };
+      reader.onerror = () => {
+        console.error('Failed to read file for motion preview');
+        setError('Failed to read the selected motion file.');
+        event.target.value = ''; // Reset input
+        return;
+      };
+      reader.readAsDataURL(file);
+      handleMotionAnalysis(file);
+    } catch (err) {
+      console.error('Error processing motion file:', err);
+      setError(err instanceof Error ? err.message : 'Failed to process the selected motion file.');
+      event.target.value = ''; // Reset input
+    }
   };
 
   const isValidUrl = (url: string) => {

@@ -9,6 +9,7 @@ import { AnimationAssets, BoundingBox } from '../services/geminiService';
 import { Frame } from '../types';
 import BananaLoader from './BananaLoader';
 import { InfoIcon, XCircleIcon, SettingsIcon, LoaderIcon, WandIcon } from './icons';
+import AnimatedExportButton from './AnimatedExportButton';
 
 // Add declaration for the gifshot library loaded from CDN
 declare var gifshot: any;
@@ -801,9 +802,11 @@ const AnimationPlayer: React.FC<AnimationPlayerProps> = ({ assets, frameCount, o
     <div className={`grid ${isShareAvailable ? 'grid-cols-2 sm:grid-cols-4' : 'grid-cols-3'} gap-2 w-full max-w-lg mb-4`}>
         <button onClick={onBack} className="bg-[var(--color-button)] text-white font-bold py-2 px-4 rounded-lg hover:bg-[var(--color-button-hover)] transition-colors duration-200 flex items-center justify-center focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-black focus-visible:ring-[var(--color-accent)]">Edit</button>
         <button onClick={onRegenerate} className="bg-[var(--color-danger)] text-white font-bold py-2 px-4 rounded-lg hover:opacity-90 transition-opacity duration-200 flex items-center justify-center focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-black focus-visible:ring-[var(--color-accent)]">Regenerate</button>
-        <button onClick={handleExport} disabled={isExporting} className="bg-[var(--color-success)] text-white font-bold py-2 px-4 rounded-lg hover:bg-[var(--color-success-hover)] transition-colors duration-200 flex items-center justify-center disabled:opacity-50 disabled:cursor-not-allowed focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-black focus-visible:ring-[var(--color-accent)]">
-            {isExporting ? 'Exporting...' : 'Export GIF'}
-        </button>
+        <AnimatedExportButton 
+            onClick={handleExport} 
+            disabled={isExporting} 
+            isExporting={isExporting}
+        />
         {isShareAvailable && (
             <button onClick={handleShare} disabled={isSharing} className="bg-[var(--color-info)] text-white font-bold py-2 px-4 rounded-lg hover:bg-[var(--color-info-hover)] transition-colors duration-200 flex items-center justify-center disabled:opacity-50 disabled:cursor-not-allowed focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-black focus-visible:ring-[var(--color-accent)]">
                 {isSharing ? 'Sharing...' : 'Share'}
