@@ -61,4 +61,36 @@ describe('AnimationPlayer component', () => {
 
         expect(window.alert).toHaveBeenCalledWith("The GIF exporter is still loading. Please wait a moment and try again.");
     });
+    it('should show an alert if gifshot is not loaded when sharing', async () => {
+        // Ensure gifshot is undefined to simulate it not being loaded
+        Object.defineProperty(window, 'gifshot', {
+            value: undefined,
+            writable: true,
+        });
+
+        render(
+            <AnimationPlayer
+                assets={mockAssets}
+                frameCount={9}
+                onRegenerate={mockOnRegenerate}
+                onBack={mockOnBack}
+                onPostProcess={mockOnPostProcess}
+                onDetectObjects={mockOnDetectObjects}
+                detectedObjects={null}
+                error={null}
+                clearError={mockClearError}
+                styleImage={null}
+                postProcessStrength={0.9}
+                onPostProcessStrengthChange={mockOnPostProcessStrengthChange}
+            />
+        );
+
+        // Wait for the animation canvas to be ready
+        await screen.findByTestId('animation-canvas');
+
+        const shareButton = screen.getByRole('button', { name: /share/i });
+        fireEvent.click(shareButton);
+
+        expect(window.alert).toHaveBeenCalledWith("The GIF exporter is still loading. Please wait a moment and try again.");
+    });
 });
