@@ -20,23 +20,7 @@ const mockClearError = vi.fn();
 const mockOnPostProcessStrengthChange = vi.fn();
 
 describe('AnimationPlayer component', () => {
-    beforeEach(() => {
-        // Mock window.alert before each test
-        vi.spyOn(window, 'alert').mockImplementation(() => {});
-    });
-
-    afterEach(() => {
-        // Restore the original window.alert after each test
-        vi.restoreAllMocks();
-    });
-
-    it('should show an alert if gifshot is not loaded when exporting', async () => {
-        // Ensure gifshot is undefined to simulate it not being loaded
-        Object.defineProperty(window, 'gifshot', {
-            value: undefined,
-            writable: true,
-        });
-
+    it('should open the export modal when the export button is clicked', async () => {
         render(
             <AnimationPlayer
                 assets={mockAssets}
@@ -60,6 +44,8 @@ describe('AnimationPlayer component', () => {
         const exportButton = screen.getByTestId('export-gif-button');
         fireEvent.click(exportButton);
 
-        expect(window.alert).toHaveBeenCalledWith("The GIF exporter is still loading. Please wait a moment and try again.");
+        // Check that the modal is rendered
+        const modalTitle = await screen.findByText('Export Animation');
+        expect(modalTitle).toBeInTheDocument();
     });
 });

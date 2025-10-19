@@ -403,7 +403,13 @@ const App: React.FC = () => {
               );
             })()}
             
-            <div className="relative w-full [@media(max-height:750px)]:w-96 [@media(max-height:650px)]:w-72 aspect-square bg-[var(--color-surface)] rounded-lg overflow-hidden shadow-2xl flex items-center justify-center">
+            <div
+              className="relative w-full [@media(max-height:750px)]:w-96 [@media(max-height:650px)]:w-72 aspect-square bg-[var(--color-surface)] rounded-lg overflow-hidden shadow-2xl flex items-center justify-center"
+              onDragEnter={(e) => fileUploadManagerRef.current?.handleDragEnter(e)}
+              onDragLeave={(e) => fileUploadManagerRef.current?.handleDragLeave(e)}
+              onDragOver={(e) => fileUploadManagerRef.current?.handleDragOver(e)}
+              onDrop={(e) => fileUploadManagerRef.current?.handleMainDrop(e)}
+            >
               {imageState.original ? (
                   <>
                       <img src={imageState.original} alt="Preview" className="w-full h-full object-cover" />

@@ -2,6 +2,7 @@
 import express from 'express';
 import dotenv from 'dotenv';
 import { GoogleGenerativeAI } from '@google/generative-ai';
+import rateLimit from 'express-rate-limit';
 
 dotenv.config();
 
@@ -12,7 +13,13 @@ app.use(express.json());
 
 const ai = new GoogleGenerativeAI({ apiKey: process.env.GEMINI_API_KEY });
 
-app.post('/api/generate-animation', async (req, res) => {
+const apiLimiter = rateLimit({
+  windowMs: 60 * 1000, // 1 minute
+  max: 10, // Limit each IP to 10 requests per windowMs
+  message: 'Too many requests from this IP, please try again after a minute',
+});
+
+app.post('/api/generate-animation', apiLimiter, async (req, res) => {
   try {
     const { imageData, prompt } = req.body;
 

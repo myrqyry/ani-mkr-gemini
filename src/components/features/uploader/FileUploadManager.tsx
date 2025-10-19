@@ -1,4 +1,4 @@
-import React, { useRef, useImperativeHandle, forwardRef } from 'react';
+import React, { useRef, useImperativeHandle, forwardRef, useState } from 'react';
 import { AppStatus, ImageState } from '../../../types/types';
 import { analyzeAnimation } from '../../../services/geminiService';
 import { XCircleIcon } from '../../icons';
@@ -13,6 +13,10 @@ import {
 export interface FileUploadManagerHandles {
   handleUploadClick: () => void;
   handlePasteUrl: (type: 'main' | 'style' | 'motion') => void;
+  handleDragEnter: (e: React.DragEvent<HTMLDivElement>) => void;
+  handleDragLeave: (e: React.DragEvent<HTMLDivElement>) => void;
+  handleDragOver: (e: React.DragEvent<HTMLDivElement>) => void;
+  handleMainDrop: (e: React.DragEvent<HTMLDivElement>) => void;
 }
 
 interface FileUploadManagerProps {
@@ -39,6 +43,52 @@ const FileUploadManager: React.FC<FileUploadManagerProps> = forwardRef<FileUploa
   const fileInputRef = useRef<HTMLInputElement>(null);
   const styleFileInputRef = useRef<HTMLInputElement>(null);
   const motionFileInputRef = useRef<HTMLInputElement>(null);
+  const [isDragging, setIsDragging] = useState(false);
+
+  const handleDragEnter = (e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragging(true);
+  };
+
+  const handleDragLeave = (e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragging(false);
+  };
+
+  const handleDragOver = (e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    e.stopPropagation();
+  };
+
+  const handleMainDrop = (e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragging(false);
+
+    const files = e.dataTransfer.files;
+    if (files && files.length > 0) {
+      const file = files[0];
+      handleFileChange({ target: { files: [file] } } as any);
+    }
+  };
+
+  const handleDrop = (e: React.DragEvent<HTMLDivElement>, type: 'style' | 'motion') => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragging(false);
+
+    const files = e.dataTransfer.files;
+    if (files && files.length > 0) {
+      const file = files[0];
+      if (type === 'style') {
+        handleStyleFileChange({ target: { files: [file] } } as any);
+      } else if (type === 'motion') {
+        handleMotionFileChange({ target: { files: [file] } } as any);
+      }
+    }
+  };
 
   const handleUploadClick = () => fileInputRef.current?.click();
   const handleUploadStyleClick = () => styleFileInputRef.current?.click();
@@ -277,12 +327,24 @@ const FileUploadManager: React.FC<FileUploadManagerProps> = forwardRef<FileUploa
   useImperativeHandle(ref, () => ({
     handleUploadClick,
     handlePasteUrl,
+    handleDragEnter,
+    handleDragLeave,
+    handleDragOver,
+    handleMainDrop,
   }));
 
   return (
     <>
-      <div className="w-full mb-4 flex flex-col sm:flex-row gap-2">
-        <div className="w-full sm:w-1/2">
+      <div
+        className={`w-full mb-4 flex flex-col sm:flex-row gap-2 ${isDragging ? 'border-blue-500' : ''}`}
+        onDragEnter={handleDragEnter}
+        onDragLeave={handleDragLeave}
+        onDragOver={handleDragOver}
+      >
+        <div
+          className="w-full sm:w-1/2"
+          onDrop={(e) => handleDrop(e, 'style')}
+        >
           <div className="relative w-full h-24 bg-[var(--color-surface)] border-2 border-dashed border-[var(--color-surface-alt)] rounded-lg flex items-center justify-center">
             {imageState.style ? (
               <>
@@ -339,7 +401,10 @@ const FileUploadManager: React.FC<FileUploadManagerProps> = forwardRef<FileUploa
             </div>
           )}
         </div>
-        <div className="w-full sm:w-1/2">
+        <div
+          className="w-full sm:w-1/2"
+          onDrop={(e) => handleDrop(e, 'motion')}
+        >
           <div className="relative w-full h-24 bg-[var(--color-surface)] border-2 border-dashed border-[var(--color-surface-alt)] rounded-lg flex items-center justify-center">
             {imageState.motion ? (
               <>

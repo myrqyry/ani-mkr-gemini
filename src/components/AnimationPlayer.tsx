@@ -10,6 +10,7 @@ import { Frame } from '../types';
 import BananaLoader from './BananaLoader';
 import { InfoIcon, XCircleIcon, SettingsIcon, LoaderIcon, WandIcon } from './icons';
 import AnimatedExportButton from './AnimatedExportButton';
+import ExportModal from './ExportModal';
 
 // Add declaration for the gifshot library loaded from CDN
 declare var gifshot: any;
@@ -186,6 +187,7 @@ const AnimationPlayer: React.FC<AnimationPlayerProps> = ({ assets, frameCount, o
   const [isLoading, setIsLoading] = useState(true);
   const [isExporting, setIsExporting] = useState(false);
   const [isSharing, setIsSharing] = useState(false);
+  const [isExportModalOpen, setIsExportModalOpen] = useState(false);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [showControls, setShowControls] = useState(false);
   const [config, setConfig] = useState<AnimationConfig>({
@@ -263,43 +265,6 @@ const AnimationPlayer: React.FC<AnimationPlayerProps> = ({ assets, frameCount, o
     }
   };
   
-  const performExport = useCallback(() => {
-    // Fix: Add a guard to ensure the gifshot library is loaded before use.
-    if (typeof gifshot === 'undefined' || !gifshot) {
-      alert("The GIF exporter is still loading. Please wait a moment and try again.");
-      return;
-    }
-    const framesToExport = interpolatedFrames || frames;
-    if (framesToExport.length === 0 || !canvasRef.current) return;
-    setIsExporting(true);
-
-    const imageUrls = framesToExport.map(frame => frame.src);
-    const speedToUse = interpolatedFrames ? config.speed / 2 : config.speed;
-    const intervalInSeconds = speedToUse / 1000;
-    const gifWidth = canvasRef.current.width;
-    const gifHeight = canvasRef.current.height;
-
-    gifshot.createGIF({
-        images: imageUrls,
-        gifWidth: gifWidth,
-        gifHeight: gifHeight,
-        interval: intervalInSeconds,
-        numWorkers: 2,
-    }, (obj: { error: boolean; image: string; errorMsg: string }) => {
-        setIsExporting(false);
-        if (!obj.error) {
-            const a = document.createElement('a');
-            a.href = obj.image;
-            a.download = 'animation.gif';
-            document.body.appendChild(a);
-            a.click();
-            document.body.removeChild(a);
-        } else {
-            console.error('GIF export failed:', obj.errorMsg);
-        }
-    });
-  }, [frames, config.speed, interpolatedFrames]);
-
   const performShare = useCallback(async () => {
     // Fix: Add a guard to ensure the gifshot library is loaded before use.
     if (typeof gifshot === 'undefined' || !gifshot) {
@@ -354,14 +319,12 @@ const AnimationPlayer: React.FC<AnimationPlayerProps> = ({ assets, frameCount, o
     // If a pending action is set and we are now in animation mode,
     // the canvas should be available to use.
     if (pendingAction && viewMode === 'animation' && canvasRef.current) {
-        if (pendingAction === 'export') {
-            performExport();
-        } else if (pendingAction === 'share') {
+      if (pendingAction === 'share') {
             performShare();
         }
         setPendingAction(null);
     }
-  }, [pendingAction, viewMode, performExport, performShare]);
+  }, [pendingAction, viewMode, performShare]);
 
   useEffect(() => {
     if (!assets.imageData || !assets.imageData.data) {
@@ -606,12 +569,7 @@ const AnimationPlayer: React.FC<AnimationPlayerProps> = ({ assets, frameCount, o
 
 
  const handleExport = () => {
-    if (viewMode === 'spritesheet') {
-        setViewMode('animation');
-        setPendingAction('export');
-    } else {
-        performExport();
-    }
+    setIsExportModalOpen(true);
  };
  
   const handleShare = () => {
@@ -633,6 +591,14 @@ const AnimationPlayer: React.FC<AnimationPlayerProps> = ({ assets, frameCount, o
 
   return (
     <div className="flex flex-col items-center justify-center w-full max-w-4xl">
+      {isExportModalOpen && (
+        <ExportModal
+          frames={currentFrames.map(f => f.src)}
+          width={canvasRef.current?.width || 512}
+          height={canvasRef.current?.height || 512}
+          onClose={() => setIsExportModalOpen(false)}
+        />
+      )}
       {error && (
         <div className="w-full max-w-lg bg-[var(--color-danger-surface)] border border-[var(--color-danger)] text-[var(--color-danger-text)] px-4 py-3 rounded-lg relative mb-4 flex items-center justify-between animate-shake" role="alert">
           <div className="pr-4">
