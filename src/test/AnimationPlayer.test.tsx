@@ -1,3 +1,4 @@
+import React from 'react';
 import { render, screen, fireEvent } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import AnimationPlayer from 'src/components/AnimationPlayer';
@@ -56,7 +57,7 @@ describe('AnimationPlayer component', () => {
         // Wait for the animation canvas to be ready
         await screen.findByTestId('animation-canvas');
 
-        const exportButton = screen.getByText('Export GIF');
+        const exportButton = screen.getByTestId('export-gif-button');
         fireEvent.click(exportButton);
 
         expect(window.alert).toHaveBeenCalledWith("The GIF exporter is still loading. Please wait a moment and try again.");

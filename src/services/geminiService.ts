@@ -72,34 +72,79 @@ export const generateAnimationAssets = async (
     base64UserImage: string | null,
     mimeType: string | null,
     imagePrompt: string,
-    onProgress: (message: string) => void
+    onProgress: (message: string) => void,
+    signal?: AbortSignal
 ): Promise<AnimationAssets | null> => {
-  try {
-    const imageGenTextPart = { text: imagePrompt };
-    const parts = [];
+    try {
+        if (signal?.aborted) {
+            throw new Error('Animation generation aborted.');
+        }
 
-    if (base64UserImage && mimeType) {
-        const userImagePart = base64ToGenerativePart(base64UserImage, mimeType);
-        parts.push(userImagePart);
+        const response = await fetch('/api/generate-animation', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                imageData: base64UserImage,
+                prompt: imagePrompt,
+            }),
+            signal,
+        });
+
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+
+        const reader = response.body?.getReader();
+        if (!reader) {
+            throw new Error("Could not read response body.");
+        }
+
+        const decoder = new TextDecoder();
+        let fullResponse = '';
+        while (true) {
+            const { done, value } = await reader.read();
+            if (done) break;
+            fullResponse += decoder.decode(value, { stream: true });
+        }
+
+        // The streamed response is a series of JSON objects. We need to parse them.
+        const jsonChunks = fullResponse.replace(/}{/g, '},{').split('},{');
+        const parsedChunks = jsonChunks.map((chunk, index) => {
+            if (index > 0) chunk = '{' + chunk;
+            if (index < jsonChunks.length - 1) chunk = chunk + '}';
+            return JSON.parse(chunk);
+        });
+
+        // Now, we need to find the image data in the parsed chunks
+        const imagePart = parsedChunks.flatMap(c => c.candidates?.[0]?.content?.parts ?? []).find(p => p.inlineData);
+        if (!imagePart?.inlineData?.data) {
+            throw new Error("No image part found in response from proxy.");
+        }
+        const imageData = { data: imagePart.inlineData.data, mimeType: imagePart.inlineData.mimeType };
+
+        let frameDuration = 120; // Default fallback value
+        const textPart = parsedChunks.flatMap(c => c.candidates?.[0]?.content?.parts ?? []).find(p => p.text);
+        if (textPart?.text) {
+            try {
+                const jsonStringMatch = textPart.text.match(/{.*}/s);
+                if (jsonStringMatch) {
+                    const parsed = JSON.parse(jsonStringMatch[0]);
+                    if (parsed.frameDuration && typeof parsed.frameDuration === 'number') {
+                        frameDuration = parsed.frameDuration;
+                    }
+                }
+            } catch (e) {
+                console.warn("Could not parse frame duration from model response. Using default.", e);
+            }
+        }
+
+        return { imageData, frames: [], frameDuration };
+    } catch (error) {
+        console.error("Error during asset generation:", error);
+        throw new Error(`Failed to process image. ${error instanceof Error ? error.message : ''}`);
     }
-    parts.push(imageGenTextPart);
-    
-    const imageGenResponse: GenerateContentResponse = await ai.models.generateContent({
-        model: imageModel,
-        contents: [{
-            role: "user",
-            parts: parts,
-        }],
-        config: {
-            responseModalities: [Modality.IMAGE, Modality.TEXT],
-        },
-    });
-
-    return parseGeminiResponse(imageGenResponse);
-  } catch (error) {
-    console.error("Error during asset generation:", error);
-    throw new Error(`Failed to process image. ${error instanceof Error ? error.message : ''}`);
-  }
 };
 
 
@@ -197,16 +242,29 @@ export const detectObjectsInAnimation = async (
  * @returns A promise that resolves to an array of base64-encoded JPEG frames.
  */
 const extractFramesFromAnimation = (
-    animationDataUrl: string, 
-    numFrames: number = 8, 
+    animationDataUrl: string,
+    numFrames: number = 8,
     totalDuration: number = 1500
 ): Promise<string[]> => {
     return new Promise((resolve, reject) => {
         const img = new Image();
+        let canvas: HTMLCanvasElement | null = null;
+        let ctx: CanvasRenderingContext2D | null = null;
+
+        const cleanup = () => {
+            if (canvas) {
+                ctx = null;
+                canvas.width = 0;
+                canvas.height = 0;
+                canvas = null;
+            }
+        };
+
         img.onload = () => {
-            const canvas = document.createElement('canvas');
-            const ctx = canvas.getContext('2d');
+            canvas = document.createElement('canvas');
+            ctx = canvas.getContext('2d');
             if (!ctx) {
+                cleanup();
                 return reject(new Error("Could not get canvas context for frame extraction."));
             }
 
@@ -219,6 +277,9 @@ const extractFramesFromAnimation = (
 
             const captureFrame = () => {
                 try {
+                    if (!ctx || !canvas) {
+                        throw new Error("Canvas context lost during frame capture.");
+                    }
                     ctx.clearRect(0, 0, canvas.width, canvas.height);
                     ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
                     const frameDataUrl = canvas.toDataURL('image/jpeg', 0.8);
@@ -230,9 +291,11 @@ const extractFramesFromAnimation = (
                     if (capturedFrames < numFrames) {
                         setTimeout(captureFrame, sampleInterval);
                     } else {
+                        cleanup();
                         resolve(frames);
                     }
                 } catch (e) {
+                    cleanup();
                     reject(e);
                 }
             };
@@ -240,7 +303,9 @@ const extractFramesFromAnimation = (
             // Start capturing after the first interval
             setTimeout(captureFrame, sampleInterval);
         };
+
         img.onerror = () => {
+            cleanup();
             reject(new Error("Failed to load animated image for frame extraction."));
         };
         img.src = animationDataUrl;

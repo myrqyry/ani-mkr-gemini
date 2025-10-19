@@ -806,6 +806,7 @@ const AnimationPlayer: React.FC<AnimationPlayerProps> = ({ assets, frameCount, o
             onClick={handleExport} 
             disabled={isExporting} 
             isExporting={isExporting}
+            data-testid="export-gif-button"
         />
         {isShareAvailable && (
             <button onClick={handleShare} disabled={isSharing} className="bg-[var(--color-info)] text-white font-bold py-2 px-4 rounded-lg hover:bg-[var(--color-info-hover)] transition-colors duration-200 flex items-center justify-center disabled:opacity-50 disabled:cursor-not-allowed focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-black focus-visible:ring-[var(--color-accent)]">
