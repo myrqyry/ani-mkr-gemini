@@ -5,7 +5,19 @@ export type ResizeOptions = {
   quality?: number;
 };
 
-const imageCache = new Map<string, { dataUrl: string; mime: string }>();
+const MAX_CACHE_SIZE = 50;
+const imageCache = new Map<string, { dataUrl: string; mime: string; timestamp: number }>();
+
+// Add cache cleanup logic
+const cleanupCache = () => {
+  if (imageCache.size >= MAX_CACHE_SIZE) {
+    const entries = Array.from(imageCache.entries());
+    entries.sort((a, b) => a[1].timestamp - b[1].timestamp);
+    entries.slice(0, Math.floor(MAX_CACHE_SIZE / 2)).forEach(([key]) => {
+      imageCache.delete(key);
+    });
+  }
+};
 
 export async function resizeImage(
   dataUrl: string,
@@ -68,7 +80,8 @@ export async function resizeImage(
   ctx.drawImage(img, sx, sy, sw, sh, 0, 0, targetW, targetH);
 
   const out = canvas.toDataURL(mime, quality);
-  const result = { dataUrl: out, mime };
+  const result = { dataUrl: out, mime, timestamp: Date.now() };
+  cleanupCache();
   imageCache.set(cacheKey, result);
   return result;
 }

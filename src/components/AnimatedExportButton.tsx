@@ -10,12 +10,14 @@ interface AnimatedExportButtonProps {
   onClick: () => void;
   disabled?: boolean;
   isExporting?: boolean;
+  'data-testid'?: string;
 }
 
 const AnimatedExportButton: React.FC<AnimatedExportButtonProps> = ({ 
   onClick, 
   disabled = false,
-  isExporting = false 
+  isExporting = false,
+  'data-testid': dataTestId
 }) => {
   const buttonRef = useRef<HTMLButtonElement>(null);
   const textRef = useRef<HTMLDivElement>(null);
@@ -133,8 +135,9 @@ const AnimatedExportButton: React.FC<AnimatedExportButtonProps> = ({
       onMouseEnter={handleMouseEnter}
       onMouseLeave={handleMouseLeave}
       disabled={disabled || isExporting}
+      data-testid={dataTestId}
       className="bg-[var(--color-success)] text-white font-bold py-2 px-4 rounded-lg transition-colors duration-200 flex items-center justify-center disabled:opacity-50 disabled:cursor-not-allowed focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-black focus-visible:ring-[var(--color-accent)] overflow-hidden relative"
-      style={{ 
+      style={{
         perspective: '1000px',
         transformStyle: 'preserve-3d',
       }}

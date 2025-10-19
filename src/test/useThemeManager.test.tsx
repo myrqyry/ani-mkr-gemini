@@ -1,9 +1,10 @@
+import React from 'react';
 import { renderHook, act } from '@testing-library/react';
 import { describe, it, expect, vi } from 'vitest';
 import { useThemeManager } from 'src/hooks/useThemeManager';
 
 describe('useThemeManager hook', () => {
-    it('should not update custom themes when importing a file with invalid structure', () => {
+    it('should not update custom themes when importing a file with invalid structure', async () => {
         const { result } = renderHook(() => useThemeManager());
 
         const invalidThemes = {
@@ -20,10 +21,8 @@ describe('useThemeManager hook', () => {
             },
         } as unknown as React.ChangeEvent<HTMLInputElement>;
 
-        expect(() => {
-            act(() => {
-                result.current.handleThemeImport(mockEvent);
-            });
-        }).toThrow();
+        await expect(act(async () => {
+            await result.current.handleThemeImport(mockEvent);
+        })).rejects.toThrow();
     });
 });

@@ -42,6 +42,7 @@ const REQUIRE_IMAGE_FOR_ANIMATION = false;
 const ALLOW_MULTIPLE_EMOJI_SELECTION = true;
 
 interface TypingAnimationState {
+  id: number;
   fullText: string;
   isDeleting: boolean;
   text: string;
@@ -149,7 +150,9 @@ const App: React.FC = () => {
     }
 
     // Condition to START the animation.
+    const animationId = Date.now();
     typingAnimationRef.current = {
+      id: animationId,
       fullText: TYPING_ANIMATION_TEXT,
       isDeleting: false,
       text: '',
@@ -160,7 +163,7 @@ const App: React.FC = () => {
     const tick = () => {
       const state = typingAnimationRef.current;
       // If the state was cleared (e.g., by a fast dependency change), stop ticking.
-      if (!state) return;
+      if (!state || state.id !== animationId) return;
 
       let { fullText, isDeleting, text } = state;
 

@@ -97,48 +97,56 @@ export const useThemeManager = () => {
    * Imports custom themes from a JSON file.
    * @param e The change event from the file input.
    */
-  const handleThemeImport = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-
-    const reader = new FileReader();
-    reader.onload = event => {
-      try {
-        const result = event.target?.result;
-        if (typeof result !== 'string') throw new Error('File could not be read as text.');
-        const importedThemes = JSON.parse(result);
-
-        if (typeof importedThemes !== 'object' || importedThemes === null) {
-          throw new Error('Imported file is not a valid JSON object.');
+  const handleThemeImport = (e: React.ChangeEvent<HTMLInputElement>): Promise<void> => {
+    return new Promise((resolve, reject) => {
+        const file = e.target.files?.[0];
+        if (!file) {
+            return resolve();
         }
 
-        // Deep validation of the imported structure
-        for (const theme in importedThemes) {
-            if (typeof importedThemes[theme] !== 'object' || importedThemes[theme] === null) {
-                throw new Error(`Invalid structure for theme '${theme}'.`);
+        const reader = new FileReader();
+        reader.onload = event => {
+          try {
+            const result = event.target?.result;
+            if (typeof result !== 'string') throw new Error('File could not be read as text.');
+            const importedThemes = JSON.parse(result);
+
+            if (typeof importedThemes !== 'object' || importedThemes === null) {
+              throw new Error('Imported file is not a valid JSON object.');
             }
-            for (const cssVar in importedThemes[theme]) {
-                if (typeof importedThemes[theme][cssVar] !== 'string') {
-                    throw new Error(`Invalid color value for '${cssVar}' in theme '${theme}'.`);
+
+            // Deep validation of the imported structure
+            for (const theme in importedThemes) {
+                if (typeof importedThemes[theme] !== 'object' || importedThemes[theme] === null) {
+                    throw new Error(`Invalid structure for theme '${theme}'.`);
+                }
+                for (const cssVar in importedThemes[theme]) {
+                    if (typeof importedThemes[theme][cssVar] !== 'string') {
+                        throw new Error(`Invalid color value for '${cssVar}' in theme '${theme}'.`);
+                    }
                 }
             }
-        }
 
-        setCustomThemes(prev => {
-          const newCustoms = { ...prev, ...importedThemes };
-          localStorage.setItem('bananimate-custom-themes', JSON.stringify(newCustoms));
-          return newCustoms;
-        });
-        setIsCustomizerOpen(false);
-      } catch (err) {
-        console.error('Failed to import themes:', err);
-      }
-    };
-    reader.onerror = () => {
-      console.error('Failed to read the selected theme file.');
-    };
-    reader.readAsText(file);
-    e.target.value = '';
+            setCustomThemes(prev => {
+              const newCustoms = { ...prev, ...importedThemes };
+              localStorage.setItem('bananimate-custom-themes', JSON.stringify(newCustoms));
+              return newCustoms;
+            });
+            setIsCustomizerOpen(false);
+            resolve();
+          } catch (err) {
+            console.error('Failed to import themes:', err);
+            reject(err);
+          }
+        };
+        reader.onerror = () => {
+            const err = new Error('Failed to read the selected theme file.');
+            console.error(err);
+            reject(err);
+        };
+        reader.readAsText(file);
+        e.target.value = '';
+    });
   };
 
   return {

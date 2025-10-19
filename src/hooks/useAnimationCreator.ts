@@ -1,4 +1,4 @@
-import { useCallback, useRef } from 'react';
+import { useCallback, useRef, useEffect } from 'react';
 import { AppStatus, ImageState, AnimationAssets } from '../types/types';
 import { generateAnimationAssets } from '../services/geminiService';
 import { buildCreativeInstruction, promptSuggestions } from '../../prompts';
@@ -15,9 +15,21 @@ export const useAnimationCreator = (
   setAnimationAssets: React.Dispatch<React.SetStateAction<AnimationAssets | null>>,
   setStoryPrompt: React.Dispatch<React.SetStateAction<string>>,
 ) => {
+  const abortControllerRef = useRef<AbortController | null>(null);
   const promptWasInitiallyEmpty = useRef<boolean>(false);
 
+  useEffect(() => {
+    return () => {
+      // Cleanup on unmount
+      abortControllerRef.current?.abort();
+    };
+  }, []);
+
   const handleCreateAnimation = useCallback(async (isRegeneration: boolean = false) => {
+    // Cancel any ongoing operation
+    abortControllerRef.current?.abort();
+    abortControllerRef.current = new AbortController();
+
     const currentPrompt = storyPrompt.trim();
     let finalPrompt = currentPrompt;
 
@@ -73,19 +85,27 @@ export const useAnimationCreator = (
         base64Image,
         mimeType,
         finalCreativeInstruction,
-        (message: string) => setLoadingMessage(message)
+        (message: string) => {
+          if (!abortControllerRef.current?.signal.aborted) {
+            setLoadingMessage(message);
+          }
+        },
+        abortControllerRef.current.signal
       );
 
-      if (!generatedAsset || !generatedAsset.imageData.data) {
-        throw new Error(`Sprite sheet generation failed. Did not receive a valid image.`);
+      if (!abortControllerRef.current?.signal.aborted) {
+        if (!generatedAsset || !generatedAsset.imageData.data) {
+          throw new Error(`Sprite sheet generation failed. Did not receive a valid image.`);
+        }
+        setAnimationAssets(generatedAsset);
+        setAppState(AppStatus.Animating);
       }
-
-      setAnimationAssets(generatedAsset);
-      setAppState(AppStatus.Animating);
     } catch (err) {
-      console.error(err);
-      setError(err instanceof Error ? err.message : 'An unknown error occurred.');
-      setAppState(AppStatus.Capturing);
+      if (!abortControllerRef.current?.signal.aborted) {
+        console.error(err);
+        setError(err instanceof Error ? err.message : 'An unknown error occurred.');
+        setAppState(AppStatus.Capturing);
+      }
     }
   }, [storyPrompt, imageState.original, frameCount, setAppState, setLoadingMessage, setError, setAnimationAssets, setStoryPrompt]);
 
