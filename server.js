@@ -14,9 +14,9 @@ app.use(express.json());
 const ai = new GoogleGenerativeAI({ apiKey: process.env.GEMINI_API_KEY });
 
 const apiLimiter = rateLimit({
-  windowMs: 60 * 1000, // 1 minute
-  max: 10, // Limit each IP to 10 requests per windowMs
-  message: 'Too many requests from this IP, please try again after a minute',
+  windowMs: parseInt(process.env.RATE_LIMIT_WINDOW_MS || '60000', 10), // 1 minute
+  max: parseInt(process.env.RATE_LIMIT_MAX_REQUESTS || '10', 10), // Limit each IP to 10 requests per windowMs
+  message: process.env.RATE_LIMIT_MESSAGE || 'Too many requests from this IP, please try again after a minute',
 });
 
 app.post('/api/generate-animation', apiLimiter, async (req, res) => {
