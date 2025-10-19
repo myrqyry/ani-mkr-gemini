@@ -30,7 +30,7 @@ export const exportToGif = (
         images: frames,
         gifWidth: width,
         gifHeight: height,
-        frameDuration: 1 / frameRate,
+        interval: 1 / frameRate,
         numWorkers: 2,
       },
       (obj: { error: boolean; image: string; errorMsg: string }) => {
