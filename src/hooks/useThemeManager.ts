@@ -112,6 +112,18 @@ export const useThemeManager = () => {
           throw new Error('Imported file is not a valid JSON object.');
         }
 
+        // Deep validation of the imported structure
+        for (const theme in importedThemes) {
+            if (typeof importedThemes[theme] !== 'object' || importedThemes[theme] === null) {
+                throw new Error(`Invalid structure for theme '${theme}'.`);
+            }
+            for (const cssVar in importedThemes[theme]) {
+                if (typeof importedThemes[theme][cssVar] !== 'string') {
+                    throw new Error(`Invalid color value for '${cssVar}' in theme '${theme}'.`);
+                }
+            }
+        }
+
         setCustomThemes(prev => {
           const newCustoms = { ...prev, ...importedThemes };
           localStorage.setItem('bananimate-custom-themes', JSON.stringify(newCustoms));
