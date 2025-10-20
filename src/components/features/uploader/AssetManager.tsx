@@ -24,22 +24,25 @@ const AssetManager: React.FC<AssetManagerProps> = ({ onAssetSelect }) => {
     setError(null);
 
     try {
-      const reader = new FileReader();
-      reader.onloadend = async () => {
-        const base64File = (reader.result as string).split(',')[1];
-        const result = await uploadFile(base64File, file.type);
-        const newAsset = {
-          uri: result.file.uri,
-          name: file.name,
-          mimeType: file.type,
-        };
-        setAssets(prevAssets => [...prevAssets, newAsset]);
+      // Convert FileReader to Promise to fix race condition
+      const base64File = await new Promise<string>((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => resolve((reader.result as string).split(',')[1]);
+        reader.onerror = error => reject(error);
+        reader.readAsDataURL(file);
+      });
+
+      const result = await uploadFile(base64File, file.type);
+      const newAsset: Asset = {
+        uri: result.file.uri,
+        name: file.name,
+        mimeType: file.type,
       };
-      reader.readAsDataURL(file);
+      setAssets(prevAssets => [...prevAssets, newAsset]);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'An unknown error occurred.');
     } finally {
-      setUploading(false);
+      setUploading(false); // Now this happens at the right time!
     }
   }, []);
 

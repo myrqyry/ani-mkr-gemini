@@ -30,6 +30,12 @@ export interface Frame {
   height: number;
 }
 
+export interface Asset {
+  uri: string;
+  name: string;
+  mimeType: string;
+}
+
 /**
  * The available themes.
  * @typedef {'default' | 'rose-pine' | 'catppuccin'} Theme
@@ -78,7 +84,7 @@ export interface AppState {
   hasMultipleCameras: boolean;
   isCameraOpen: boolean;
   isExportModalOpen: boolean;
-  selectedAsset: any;
+  selectedAsset: Asset | null;
 }
 
 /**
@@ -106,4 +112,5 @@ export type AppAction =
   | { type: 'SET_FRAME_COUNT'; payload: number }
   | { type: 'SET_POST_PROCESS_STRENGTH'; payload: number }
   | { type: 'SET_HAS_MULTIPLE_CAMERAS'; payload: boolean }
-  | { type: 'SET_IS_CAMERA_OPEN'; payload: boolean };
+  | { type: 'SET_IS_CAMERA_OPEN'; payload: boolean }
+  | { type: 'SET_SELECTED_ASSET'; payload: Asset | null };

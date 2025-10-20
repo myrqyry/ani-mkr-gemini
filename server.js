@@ -9,7 +9,7 @@ dotenv.config();
 const app = express();
 const port = 3001;
 
-app.use(express.json({ limit: '50mb' }));
+app.use(express.json({ limit: '10mb' }));
 
 const ai = new GoogleGenerativeAI({ apiKey: process.env.GEMINI_API_KEY });
 
@@ -37,6 +37,9 @@ app.post('/api/generate-animation', apiLimiter, async (req, res) => {
 
     let imagePart;
     if (fileUri) {
+      if (!mimeType) {
+        return res.status(400).json({ error: 'mimeType is required when fileUri is provided' });
+      }
       imagePart = {
         fileData: {
           mimeType,
@@ -83,6 +86,9 @@ app.listen(port, () => {
 app.post('/api/upload-file', apiLimiter, async (req, res) => {
   try {
     const { file, mimeType } = req.body;
+    if (!file || !mimeType) {
+      return res.status(400).json({ error: 'Request body must contain file and mimeType' });
+    }
     const result = await ai.uploadFile(file, { mimeType });
     res.json(result);
   } catch (error) {

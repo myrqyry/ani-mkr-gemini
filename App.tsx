@@ -5,7 +5,7 @@
 
 
 import React, { useState, useCallback, useRef, useEffect, useReducer } from 'react';
-import { AppState, ImageState, AppStatus } from 'src/types/types';
+import { AppState, ImageState, AppStatus, Asset } from 'src/types/types';
 import { AnimationAssets, BoundingBox } from 'src/services/geminiService';
 import { promptSuggestions } from 'prompts';
 import CameraView, { CameraViewHandles } from 'src/components/CameraView';
@@ -25,6 +25,7 @@ import { useObjectDetection } from 'src/hooks/useObjectDetection';
 import { usePostProcessing } from 'src/hooks/usePostProcessing';
 import { appReducer, initialState } from 'src/reducers/appReducer';
 import { categorizeError, getErrorTitle } from 'src/utils/errorHandler';
+import { exportAsMP4, exportAsGIF, exportAsWebM } from 'src/utils/exportUtils';
 import {
   FRAME_COUNTS,
   TYPING_ANIMATION_TEXT,
@@ -105,7 +106,7 @@ const App: React.FC = () => {
     state.selectedAsset,
   );
 
-  const handleAssetSelect = (asset: any) => {
+  const handleAssetSelect = (asset: Asset) => {
     dispatch({ type: 'SET_SELECTED_ASSET', payload: asset });
   };
 
@@ -561,10 +562,23 @@ const App: React.FC = () => {
         )}
       {isExportModalOpen && animationAssets && (
         <ExportModal
-          frames={animationAssets.frames}
-          width={512}
-          height={512}
+          isOpen={isExportModalOpen}
           onClose={() => dispatch({ type: 'SET_IS_EXPORT_MODAL_OPEN', payload: false })}
+          onExport={(format) => {
+            if (!animationAssets) return;
+            switch (format) {
+              case 'mp4':
+                exportAsMP4(animationAssets.frames);
+                break;
+              case 'gif':
+                exportAsGIF(animationAssets.frames);
+                break;
+              case 'webm':
+                exportAsWebM(animationAssets.frames);
+                break;
+            }
+            dispatch({ type: 'SET_IS_EXPORT_MODAL_OPEN', payload: false });
+          }}
         />
       )}
     </div>
