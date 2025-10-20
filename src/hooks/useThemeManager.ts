@@ -12,12 +12,12 @@ export const useThemeManager = () => {
   const [isCustomizerOpen, setIsCustomizerOpen] = useState(false);
 
   useEffect(() => {
-    const storedTheme = localStorage.getItem('bananimate-theme') as Theme | null;
+    const storedTheme = localStorage.getItem('ani-mkr-gemini-theme') as Theme | null;
     if (storedTheme && THEMES.some(t => t.id === storedTheme)) {
       setCurrentTheme(storedTheme);
     }
     try {
-      const storedCustoms = localStorage.getItem('bananimate-custom-themes');
+      const storedCustoms = localStorage.getItem('ani-mkr-gemini-custom-themes');
       if (storedCustoms) {
         setCustomThemes(JSON.parse(storedCustoms));
       }
@@ -28,7 +28,7 @@ export const useThemeManager = () => {
 
   useEffect(() => {
     document.body.dataset.theme = currentTheme;
-    localStorage.setItem('bananimate-theme', currentTheme);
+    localStorage.setItem('ani-mkr-gemini-theme', currentTheme);
 
     EDITABLE_THEME_PROPERTIES.forEach(prop => {
       document.documentElement.style.removeProperty(prop.cssVar);
@@ -56,7 +56,7 @@ export const useThemeManager = () => {
           [cssVar]: value,
         },
       };
-      localStorage.setItem('bananimate-custom-themes', JSON.stringify(newCustoms));
+      localStorage.setItem('ani-mkr-gemini-custom-themes', JSON.stringify(newCustoms));
       return newCustoms;
     });
   };
@@ -68,7 +68,7 @@ export const useThemeManager = () => {
     setCustomThemes(prev => {
       const newCustoms = { ...prev };
       delete newCustoms[currentTheme];
-      localStorage.setItem('bananimate-custom-themes', JSON.stringify(newCustoms));
+      localStorage.setItem('ani-mkr-gemini-custom-themes', JSON.stringify(newCustoms));
       return newCustoms;
     });
   };
@@ -83,7 +83,7 @@ export const useThemeManager = () => {
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
-      a.download = 'bananimate-themes.json';
+      a.download = 'ani-mkr-gemini-themes.json';
       document.body.appendChild(a);
       a.click();
       document.body.removeChild(a);
@@ -129,7 +129,7 @@ export const useThemeManager = () => {
 
             setCustomThemes(prev => {
               const newCustoms = { ...prev, ...importedThemes };
-              localStorage.setItem('bananimate-custom-themes', JSON.stringify(newCustoms));
+              localStorage.setItem('ani-mkr-gemini-custom-themes', JSON.stringify(newCustoms));
               return newCustoms;
             });
             setIsCustomizerOpen(false);

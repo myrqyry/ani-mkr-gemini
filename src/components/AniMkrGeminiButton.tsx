@@ -6,33 +6,33 @@
 
 import React, { useRef, useEffect } from 'react';
 import { gsap } from 'gsap';
-import BananaIcon from './BananaIcon';
+import Icon from './Icon';
 
 /**
- * Props for the BanamimatorButton component.
- * @interface BanamimatorButtonProps
+ * Props for the AniMkrGeminiButton component.
+ * @interface AniMkrGeminiButtonProps
  * @property {() => void} onClick - Function to call when the button is clicked.
  * @property {string} aria-label - ARIA label for the button.
  * @property {boolean} [disabled] - Whether the button is disabled.
  */
-interface BanamimatorButtonProps {
+interface AniMkrGeminiButtonProps {
   onClick: () => void;
   'aria-label': string;
   disabled?: boolean;
 }
 
 /**
- * A Banamimator button component.
- * @param {BanamimatorButtonProps} props - The props for the component.
+ * A AniMkrGemini button component.
+ * @param {AniMkrGeminiButtonProps} props - The props for the component.
  * @returns {React.ReactElement} The rendered component.
  */
-const BanamimatorButton: React.FC<BanamimatorButtonProps> = ({ onClick, 'aria-label': ariaLabel, disabled = false }) => {
+const AniMkrGeminiButton: React.FC<AniMkrGeminiButtonProps> = ({ onClick, 'aria-label': ariaLabel, disabled = false }) => {
   const buttonRef = useRef<HTMLButtonElement>(null);
   const iconRef = useRef<HTMLDivElement>(null);
   const textRef = useRef<HTMLDivElement>(null);
   const charsRef = useRef<HTMLSpanElement[]>([]);
 
-  const text = '🍌 ANIMATE';
+  const text = 'ani-mkr-gemini';
 
   useEffect(() => {
     if (!textRef.current) return;
@@ -208,20 +208,20 @@ const BanamimatorButton: React.FC<BanamimatorButtonProps> = ({ onClick, 'aria-la
       className={`transition-colors duration-200 focus:outline-none rounded-full p-6 bg-gradient-to-br from-[var(--color-accent)] to-[var(--color-special)] shadow-lg ${disabled ? 'filter grayscale opacity-50 cursor-not-allowed' : ''}`}
       aria-label={ariaLabel}
       aria-disabled={disabled}
-      data-testid="bananimate-button"
-      style={{ 
+      data-testid="ani-mkr-gemini-button"
+      style={{
         perspective: '1000px',
         transformStyle: 'preserve-3d',
       }}
     >
       <div className="flex flex-col items-center gap-2">
         <div ref={iconRef} style={{ transformStyle: 'preserve-3d' }}>
-          <BananaIcon className="w-20 h-20" />
+          <Icon className="w-20 h-20" />
         </div>
-        <div 
+        <div
           ref={textRef}
           className="text-white font-bold text-lg tracking-wider"
-          style={{ 
+          style={{
             transformStyle: 'preserve-3d',
           }}
         />
@@ -230,4 +230,4 @@ const BanamimatorButton: React.FC<BanamimatorButtonProps> = ({ onClick, 'aria-la
   );
 };
 
-export default BanamimatorButton;
+export default AniMkrGeminiButton;

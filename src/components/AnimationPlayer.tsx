@@ -7,7 +7,7 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { AnimationAssets, BoundingBox } from '../services/geminiService';
 import { Frame } from '../types';
-import BananaLoader from './BananaLoader';
+import Loader from './Loader';
 import { ExportIcon, InfoIcon, XCircleIcon, SettingsIcon, LoaderIcon, WandIcon } from './icons';
 
 // Add declaration for the gifshot library loaded from CDN
@@ -655,7 +655,7 @@ const AnimationPlayer: React.FC<AnimationPlayerProps> = ({ assets, frameCount, o
         >
         {isLoading ? (
            <div className="flex flex-col items-center justify-center text-center p-8">
-            <BananaLoader className="w-60 h-60" />
+            <Loader className="w-60 h-60" />
           </div>
         ) : (
             <>
@@ -696,7 +696,7 @@ const AnimationPlayer: React.FC<AnimationPlayerProps> = ({ assets, frameCount, o
                   />
                    <div className="absolute bottom-0 left-0 right-0 bg-black/60 p-4 text-center z-10 backdrop-blur-sm">
                         <p className="text-sm text-[var(--color-text-base)] max-w-prose mx-auto">
-                            This animation was created with just one call to the 🍌 Gemini model by asking it to create this sprite sheet
+                            This animation was created with just one call to the Gemini model by asking it to create this sprite sheet
                         </p>
                   </div>
                 </>

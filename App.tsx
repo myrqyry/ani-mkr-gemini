@@ -13,7 +13,7 @@ import AnimationPlayer from 'src/components/AnimationPlayer';
 import ExportModal from 'src/components/ExportModal';
 import LoadingOverlay from 'src/components/LoadingOverlay';
 import { UploadIcon, SwitchCameraIcon, XCircleIcon, CameraIcon, LinkIcon } from 'src/components/icons';
-import BanamimatorButton from 'src/components/BanamimatorButton';
+import AniMkrGeminiButton from 'src/components/AniMkrGeminiButton';
 import { useThemeManager } from 'src/hooks/useThemeManager';
 import ThemeSwitcher from 'src/components/features/theme/ThemeSwitcher';
 import ThemeCustomizer from 'src/components/features/theme/ThemeCustomizer';
@@ -278,7 +278,7 @@ const App: React.FC = () => {
     }
   }, [isCameraOpen, handleCreateAnimation]);
   
-  const isBananimateDisabled = !isCameraOpen && !imageState.original && (REQUIRE_IMAGE_FOR_ANIMATION || !storyPrompt.trim());
+  const isAniMkrGeminiDisabled = !isCameraOpen && !imageState.original && (REQUIRE_IMAGE_FOR_ANIMATION || !storyPrompt.trim());
 
   const renderContent = () => {
     switch (appStatus) {
@@ -329,7 +329,7 @@ const App: React.FC = () => {
               {/* A 'fake' placeholder is used because the native placeholder attribute doesn't support newlines. */}
               {!storyPrompt && !isPromptFocused && (
                 <div data-testid="placeholder-text" className="absolute top-0 left-0 px-4 py-3 text-[var(--color-text-muted)] text-lg pointer-events-none" aria-hidden="true">
-                  What would you like to <span className="text-[var(--color-warning)]">Bananimate</span>?<br />
+                  What would you like to <span className="text-[var(--color-warning)]">create</span>?<br />
                   <span className="text-[var(--color-text-subtle)]">
                     {typedPlaceholder}
                     <span className="animate-pulse font-normal">|</span>
@@ -450,7 +450,7 @@ const App: React.FC = () => {
               ) : (
                 <div className="flex flex-col items-center justify-center h-full w-full pb-32">
                   <p className="mb-4 text-[var(--color-text-muted)] text-lg">
-                    {REQUIRE_IMAGE_FOR_ANIMATION ? 'Add an image to Bananimate' : 'Optionally, add an image to Bananimate'}
+                    {REQUIRE_IMAGE_FOR_ANIMATION ? 'Add an image to start' : 'Optionally, add an image to start'}
                   </p>
                   <div className="flex flex-col items-center gap-4">
                     <button
@@ -482,9 +482,9 @@ const App: React.FC = () => {
               )}
               {/* Button is now positioned over the image/camera view */}
               <div className="absolute bottom-4 left-1/2 -translate-x-1/2 z-10">
-                <BanamimatorButton
+                <AniMkrGeminiButton
                   onClick={handlePrimaryAction}
-                  disabled={isBananimateDisabled}
+                  disabled={isAniMkrGeminiDisabled}
                   aria-label={isCameraOpen ? 'Capture and Animate' : 'Create Animation'}
                 />
               </div>
