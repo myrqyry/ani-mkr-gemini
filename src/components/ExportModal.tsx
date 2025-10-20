@@ -10,6 +10,14 @@ import AnimatedExportButton from './AnimatedExportButton';
 // Add a declaration for the JSZip library loaded from the CDN.
 declare var JSZip: any;
 
+/**
+ * Props for the ExportModal component.
+ * @interface ExportModalProps
+ * @property {string[]} frames - The frames to export.
+ * @property {number} width - The width of the export.
+ * @property {number} height - The height of the export.
+ * @property {() => void} onClose - Function to call when the modal is closed.
+ */
 interface ExportModalProps {
   frames: string[];
   width: number;
@@ -20,6 +28,11 @@ interface ExportModalProps {
 type ExportFormat = 'gif' | 'mp4' | 'webp' | 'png';
 type ExportQuality = 'draft' | 'standard' | 'high' | 'ultra';
 
+/**
+ * A modal for exporting an animation.
+ * @param {ExportModalProps} props - The props for the component.
+ * @returns {React.ReactElement} The rendered component.
+ */
 const ExportModal: React.FC<ExportModalProps> = ({ frames, width, height, onClose }) => {
   const [format, setFormat] = useState<ExportFormat>('gif');
   const [quality, setQuality] = useState<ExportQuality>('standard');

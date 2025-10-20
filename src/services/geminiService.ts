@@ -13,17 +13,36 @@ const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
 const imageModel = 'gemini-2.5-flash-image-preview';
 const textModel = 'gemini-2.5-flash';
 
+/**
+ * The assets for an animation.
+ * @interface AnimationAssets
+ * @property {{ data: string, mimeType: string }} imageData - The image data for the animation.
+ * @property {Frame[]} frames - The frames of the animation.
+ * @property {number} frameDuration - The duration of each frame in ms.
+ */
 export interface AnimationAssets {
   imageData: { data: string, mimeType: string };
   frames: Frame[];
   frameDuration: number;
 }
 
+/**
+ * A bounding box for an object in an image.
+ * @interface BoundingBox
+ * @property {[number, number, number, number]} box_2d - The bounding box in the format [ymin, xmin, ymax, xmax].
+ * @property {string} label - The label for the object.
+ */
 export interface BoundingBox {
   box_2d: [number, number, number, number]; // ymin, xmin, ymax, xmax
   label: string;
 }
 
+/**
+ * Converts a base64 string to a generative part.
+ * @param {string} base64 - The base64 string.
+ * @param {string} mimeType - The MIME type of the image.
+ * @returns {{ inlineData: { data: string, mimeType: string } }} - The generative part.
+ */
 const base64ToGenerativePart = (base64: string, mimeType: string) => {
     return {
       inlineData: {
@@ -33,6 +52,11 @@ const base64ToGenerativePart = (base64: string, mimeType: string) => {
     };
 };
 
+/**
+ * Parses the response from the Gemini model.
+ * @param {GenerateContentResponse} response - The response from the model.
+ * @returns {AnimationAssets} The parsed animation assets.
+ */
 const parseGeminiResponse = (response: GenerateContentResponse): AnimationAssets => {
     const responseParts = response.candidates?.[0]?.content?.parts;
     if (!responseParts) {
@@ -68,6 +92,15 @@ const parseGeminiResponse = (response: GenerateContentResponse): AnimationAssets
     return { imageData, frames: [], frameDuration };
 };
 
+/**
+ * Generates animation assets.
+ * @param {string | null} base64UserImage - The base64-encoded user image.
+ * @param {string | null} mimeType - The MIME type of the user image.
+ * @param {string} imagePrompt - The prompt for the image.
+ * @param {(message: string) => void} onProgress - Function to call with progress messages.
+ * @param {AbortSignal} [signal] - An optional AbortSignal to cancel the request.
+ * @returns {Promise<AnimationAssets | null>} A promise that resolves to the animation assets.
+ */
 export const generateAnimationAssets = async (
     base64UserImage: string | null,
     mimeType: string | null,
@@ -147,7 +180,17 @@ export const generateAnimationAssets = async (
     }
 };
 
-
+/**
+ * Post-processes an animation.
+ * @param {string} base64SpriteSheet - The base64-encoded sprite sheet.
+ * @param {string} mimeType - The MIME type of the sprite sheet.
+ * @param {string} postProcessPrompt - The prompt for post-processing.
+ * @param {(message: string) => void} onProgress - Function to call with progress messages.
+ * @param {string} [base64StyleImage] - The base64-encoded style image.
+ * @param {string} [styleMimeType] - The MIME type of the style image.
+ * @param {number} [temperature] - The temperature for the model.
+ * @returns {Promise<AnimationAssets | null>} A promise that resolves to the post-processed animation assets.
+ */
 export const postProcessAnimation = async (
     base64SpriteSheet: string,
     mimeType: string,
@@ -196,6 +239,13 @@ export const postProcessAnimation = async (
     }
 };
 
+/**
+ * Detects objects in an animation.
+ * @param {string} base64SpriteSheet - The base64-encoded sprite sheet.
+ * @param {string} mimeType - The MIME type of the sprite sheet.
+ * @param {string} detectionPrompt - The prompt for object detection.
+ * @returns {Promise<BoundingBox[]>} A promise that resolves to an array of bounding boxes.
+ */
 export const detectObjectsInAnimation = async (
   base64SpriteSheet: string,
   mimeType: string,
@@ -312,6 +362,12 @@ const extractFramesFromAnimation = (
     });
 };
 
+/**
+ * Analyzes an animation to generate a prompt.
+ * @param {string} animationDataUrl - The data URL of the animation.
+ * @param {(message: string) => void} onProgress - Function to call with progress messages.
+ * @returns {Promise<string>} A promise that resolves to the generated prompt.
+ */
 export const analyzeAnimation = async (
     animationDataUrl: string,
     onProgress: (message: string) => void

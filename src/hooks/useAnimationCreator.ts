@@ -5,6 +5,18 @@ import { buildCreativeInstruction, promptSuggestions } from '../../prompts';
 import { resizeImage } from '../utils/image';
 import { MAIN_IMAGE_MAX_SIZE } from '../constants/app';
 
+/**
+ * A hook for creating animations.
+ * @param {ImageState} imageState - The state of the image.
+ * @param {string} storyPrompt - The prompt for the story.
+ * @param {number} frameCount - The number of frames in the animation.
+ * @param {React.Dispatch<React.SetStateAction<AppStatus>>} setAppState - Function to set the app state.
+ * @param {React.Dispatch<React.SetStateAction<string>>} setLoadingMessage - Function to set the loading message.
+ * @param {React.Dispatch<React.SetStateAction<string | null>>} setError - Function to set the error.
+ * @param {React.Dispatch<React.SetStateAction<AnimationAssets | null>>} setAnimationAssets - Function to set the animation assets.
+ * @param {React.Dispatch<React.SetStateAction<string>>} setStoryPrompt - Function to set the story prompt.
+ * @returns {{ handleCreateAnimation: (isRegeneration?: boolean) => Promise<void> }} - An object with a function to create an animation.
+ */
 export const useAnimationCreator = (
   imageState: ImageState,
   storyPrompt: string,

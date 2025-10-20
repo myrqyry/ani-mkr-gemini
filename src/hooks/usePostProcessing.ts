@@ -5,6 +5,19 @@ import { buildPostProcessPrompt } from '../../prompts';
 import { resizeImage } from '../utils/image';
 import { STYLE_IMAGE_MAX_SIZE } from '../constants/app';
 
+/**
+ * A hook for post-processing an animation.
+ * @param {AnimationAssets | null} animationAssets - The assets for the animation.
+ * @param {ImageState} imageState - The state of the image.
+ * @param {number} frameCount - The number of frames in the animation.
+ * @param {number} styleIntensity - The intensity of the style.
+ * @param {number} postProcessStrength - The strength of the post-processing.
+ * @param {React.Dispatch<React.SetStateAction<AppStatus>>} setAppState - Function to set the app state.
+ * @param {React.Dispatch<React.SetStateAction<string>>} setLoadingMessage - Function to set the loading message.
+ * @param {React.Dispatch<React.SetStateAction<string | null>>} setError - Function to set the error.
+ * @param {React.Dispatch<React.SetStateAction<AnimationAssets | null>>} setAnimationAssets - Function to set the animation assets.
+ * @returns {{ handlePostProcess: (effect: string, editPrompt?: string) => Promise<void> }} - An object with a function to post-process the animation.
+ */
 export const usePostProcessing = (
   animationAssets: AnimationAssets | null,
   imageState: ImageState,

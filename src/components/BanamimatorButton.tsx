@@ -8,12 +8,24 @@ import React, { useRef, useEffect } from 'react';
 import { gsap } from 'gsap';
 import BananaIcon from './BananaIcon';
 
+/**
+ * Props for the BanamimatorButton component.
+ * @interface BanamimatorButtonProps
+ * @property {() => void} onClick - Function to call when the button is clicked.
+ * @property {string} aria-label - ARIA label for the button.
+ * @property {boolean} [disabled] - Whether the button is disabled.
+ */
 interface BanamimatorButtonProps {
   onClick: () => void;
   'aria-label': string;
   disabled?: boolean;
 }
 
+/**
+ * A Banamimator button component.
+ * @param {BanamimatorButtonProps} props - The props for the component.
+ * @returns {React.ReactElement} The rendered component.
+ */
 const BanamimatorButton: React.FC<BanamimatorButtonProps> = ({ onClick, 'aria-label': ariaLabel, disabled = false }) => {
   const buttonRef = useRef<HTMLButtonElement>(null);
   const iconRef = useRef<HTMLDivElement>(null);

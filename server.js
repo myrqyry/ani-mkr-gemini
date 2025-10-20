@@ -19,6 +19,15 @@ const apiLimiter = rateLimit({
   message: process.env.RATE_LIMIT_MESSAGE || 'Too many requests from this IP, please try again after a minute',
 });
 
+/**
+ * @route POST /api/generate-animation
+ * @description Generates an animation based on an image and a prompt.
+ * @param {object} req - The request object.
+ * @param {object} req.body - The request body.
+ * @param {string} req.body.imageData - The base64-encoded image data.
+ * @param {string} req.body.prompt - The prompt for the animation.
+ * @param {object} res - The response object.
+ */
 app.post('/api/generate-animation', apiLimiter, async (req, res) => {
   try {
     const { imageData, prompt } = req.body;

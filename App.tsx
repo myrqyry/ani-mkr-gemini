@@ -51,6 +51,10 @@ interface TypingAnimationState {
   speed: number;
 }
 
+/**
+ * The main App component.
+ * @returns {React.ReactElement} The rendered component.
+ */
 const App: React.FC = () => {
   const {
     currentTheme,

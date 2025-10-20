@@ -6,6 +6,14 @@
 import React, { useRef, useEffect } from 'react';
 import { gsap } from 'gsap';
 
+/**
+ * Props for the AnimatedExportButton component.
+ * @interface AnimatedExportButtonProps
+ * @property {() => void} onClick - Function to call when the button is clicked.
+ * @property {boolean} [disabled] - Whether the button is disabled.
+ * @property {boolean} [isExporting] - Whether the button is in an exporting state.
+ * @property {string} [data-testid] - Test ID for the button.
+ */
 interface AnimatedExportButtonProps {
   onClick: () => void;
   disabled?: boolean;
@@ -13,11 +21,16 @@ interface AnimatedExportButtonProps {
   'data-testid'?: string;
 }
 
-const AnimatedExportButton: React.FC<AnimatedExportButtonProps> = ({ 
-  onClick, 
+/**
+ * An animated export button component.
+ * @param {AnimatedExportButtonProps} props - The props for the component.
+ * @returns {React.ReactElement} The rendered component.
+ */
+const AnimatedExportButton: React.FC<AnimatedExportButtonProps> = ({
+  onClick,
   disabled = false,
   isExporting = false,
-  'data-testid': dataTestId
+  'data-testid': dataTestId,
 }) => {
   const buttonRef = useRef<HTMLButtonElement>(null);
   const textRef = useRef<HTMLDivElement>(null);

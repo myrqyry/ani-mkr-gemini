@@ -5,16 +5,34 @@
 
 import React, { useRef, useEffect, useCallback, useImperativeHandle, forwardRef, useState } from 'react';
 
+/**
+ * Handles for the CameraView component.
+ * @interface CameraViewHandles
+ * @property {() => void} capture - Function to capture an image.
+ * @property {() => void} flipCamera - Function to flip the camera.
+ */
 export interface CameraViewHandles {
   capture: () => void;
   flipCamera: () => void;
 }
 
+/**
+ * Props for the CameraView component.
+ * @interface CameraViewProps
+ * @property {(imageDataUrl: string) => void} onCapture - Function to call when an image is captured.
+ * @property {(message: string) => void} onError - Function to call when an error occurs.
+ */
 interface CameraViewProps {
   onCapture: (imageDataUrl: string) => void;
   onError: (message: string) => void;
 }
 
+/**
+ * A component for displaying a camera view.
+ * @param {CameraViewProps} props - The props for the component.
+ * @param {React.Ref<CameraViewHandles>} ref - The ref for the component.
+ * @returns {React.ReactElement} The rendered component.
+ */
 const CameraView = forwardRef<CameraViewHandles, CameraViewProps>(({ onCapture, onError }, ref) => {
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);

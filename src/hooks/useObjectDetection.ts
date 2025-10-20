@@ -3,6 +3,15 @@ import { AppStatus, AnimationAssets, BoundingBox } from '../types/types';
 import { detectObjectsInAnimation } from '../services/geminiService';
 import { buildObjectDetectionPrompt } from '../../prompts';
 
+/**
+ * A hook for detecting objects in an animation.
+ * @param {AnimationAssets | null} animationAssets - The assets for the animation.
+ * @param {React.Dispatch<React.SetStateAction<AppStatus>>} setAppState - Function to set the app state.
+ * @param {React.Dispatch<React.SetStateAction<string>>} setLoadingMessage - Function to set the loading message.
+ * @param {React.Dispatch<React.SetStateAction<string | null>>} setError - Function to set the error.
+ * @param {React.Dispatch<React.SetStateAction<BoundingBox[] | null>>} setDetectedObjects - Function to set the detected objects.
+ * @returns {{ handleDetectObjects: () => Promise<void> }} - An object with a function to detect objects.
+ */
 export const useObjectDetection = (
   animationAssets: AnimationAssets | null,
   setAppState: React.Dispatch<React.SetStateAction<AppStatus>>,

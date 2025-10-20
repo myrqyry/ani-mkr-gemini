@@ -7,6 +7,11 @@
 
 import React from 'react';
 
+/**
+ * Camera icon component.
+ * @param {React.SVGProps<SVGSVGElement>} props - The props for the component.
+ * @returns {React.ReactElement} The rendered component.
+ */
 export const CameraIcon: React.FC<React.SVGProps<SVGSVGElement>> = (props) => (
   <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}>
     <path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3l-2.5-3z"></path>
@@ -14,12 +19,22 @@ export const CameraIcon: React.FC<React.SVGProps<SVGSVGElement>> = (props) => (
   </svg>
 );
 
+/**
+ * Sparkles icon component.
+ * @param {React.SVGProps<SVGSVGElement>} props - The props for the component.
+ * @returns {React.ReactElement} The rendered component.
+ */
 export const SparklesIcon: React.FC<React.SVGProps<SVGSVGElement>> = (props) => (
   <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}>
     <path d="m12 3-1.9 5.8-5.8 1.9 5.8 1.9 1.9 5.8 1.9-5.8 5.8-1.9-5.8-1.9Z"></path>
   </svg>
 );
 
+/**
+ * XCircle icon component.
+ * @param {React.SVGProps<SVGSVGElement>} props - The props for the component.
+ * @returns {React.ReactElement} The rendered component.
+ */
 export const XCircleIcon: React.FC<React.SVGProps<SVGSVGElement>> = (props) => (
     <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}>
         <circle cx="12" cy="12" r="10"></circle>
@@ -28,6 +43,11 @@ export const XCircleIcon: React.FC<React.SVGProps<SVGSVGElement>> = (props) => (
     </svg>
 );
 
+/**
+ * RefreshCw icon component.
+ * @param {React.SVGProps<SVGSVGElement>} props - The props for the component.
+ * @returns {React.ReactElement} The rendered component.
+ */
 export const RefreshCwIcon: React.FC<React.SVGProps<SVGSVGElement>> = (props) => (
     <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}>
         <path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"></path>
@@ -37,7 +57,11 @@ export const RefreshCwIcon: React.FC<React.SVGProps<SVGSVGElement>> = (props) =>
     </svg>
 );
 
-
+/**
+ * Loader icon component.
+ * @param {React.SVGProps<SVGSVGElement>} props - The props for the component.
+ * @returns {React.ReactElement} The rendered component.
+ */
 export const LoaderIcon: React.FC<React.SVGProps<SVGSVGElement>> = (props) => (
   <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}>
     <path d="M12 2v4"></path>
@@ -51,6 +75,11 @@ export const LoaderIcon: React.FC<React.SVGProps<SVGSVGElement>> = (props) => (
   </svg>
 );
 
+/**
+ * Download icon component.
+ * @param {React.SVGProps<SVGSVGElement>} props - The props for the component.
+ * @returns {React.ReactElement} The rendered component.
+ */
 export const DownloadIcon: React.FC<React.SVGProps<SVGSVGElement>> = (props) => (
     <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}>
         <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
@@ -59,6 +88,11 @@ export const DownloadIcon: React.FC<React.SVGProps<SVGSVGElement>> = (props) => 
     </svg>
 );
 
+/**
+ * Upload icon component.
+ * @param {React.SVGProps<SVGSVGElement>} props - The props for the component.
+ * @returns {React.ReactElement} The rendered component.
+ */
 export const UploadIcon: React.FC<React.SVGProps<SVGSVGElement>> = (props) => (
   <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}>
     <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
@@ -67,6 +101,11 @@ export const UploadIcon: React.FC<React.SVGProps<SVGSVGElement>> = (props) => (
   </svg>
 );
 
+/**
+ * Settings icon component.
+ * @param {React.SVGProps<SVGSVGElement>} props - The props for the component.
+ * @returns {React.ReactElement} The rendered component.
+ */
 export const SettingsIcon: React.FC<React.SVGProps<SVGSVGElement>> = (props) => (
     <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}>
       <path d="M10.325 4.317c.426 -1.756 2.924 -1.756 3.35 0a1.724 1.724 0 0 0 2.573 1.066c1.543 -.94 3.31 .826 2.37 2.37a1.724 1.724 0 0 0 1.065 2.572c1.756 .426 1.756 2.924 0 3.35a1.724 1.724 0 0 0 -1.066 2.573c.94 1.543 -.826 3.31 -2.37 2.37a1.724 1.724 0 0 0 -2.572 1.065c-.426 1.756 -2.924 1.756 -3.35 0a1.724 1.724 0 0 0 -2.573 -1.066c-1.543 .94 -3.31 -.826 -2.37 -2.37a1.724 1.724 0 0 0 -1.065 -2.572c-1.756 -.426 -1.756 -2.924 0 -3.35a1.724 1.724 0 0 0 1.066 -2.573c-.94 -1.543 .826 -3.31 2.37 -2.37c1 .608 2.296 .07 2.572 -1.065z"></path>
@@ -74,6 +113,11 @@ export const SettingsIcon: React.FC<React.SVGProps<SVGSVGElement>> = (props) => 
     </svg>
 );
 
+/**
+ * RotateCcw icon component.
+ * @param {React.SVGProps<SVGSVGElement>} props - The props for the component.
+ * @returns {React.ReactElement} The rendered component.
+ */
 export const RotateCcwIcon: React.FC<React.SVGProps<SVGSVGElement>> = (props) => (
     <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}>
         <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"></path>
@@ -81,12 +125,22 @@ export const RotateCcwIcon: React.FC<React.SVGProps<SVGSVGElement>> = (props) =>
     </svg>
 );
 
+/**
+ * Play icon component.
+ * @param {React.SVGProps<SVGSVGElement>} props - The props for the component.
+ * @returns {React.ReactElement} The rendered component.
+ */
 export const PlayIcon: React.FC<React.SVGProps<SVGSVGElement>> = (props) => (
   <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}>
     <polygon points="5 3 19 12 5 21 5 3"></polygon>
   </svg>
 );
 
+/**
+ * Image icon component.
+ * @param {React.SVGProps<SVGSVGElement>} props - The props for the component.
+ * @returns {React.ReactElement} The rendered component.
+ */
 export const ImageIcon: React.FC<React.SVGProps<SVGSVGElement>> = (props) => (
     <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}>
         <rect width="18" height="18" x="3" y="3" rx="2" ry="2"></rect>
@@ -95,12 +149,22 @@ export const ImageIcon: React.FC<React.SVGProps<SVGSVGElement>> = (props) => (
     </svg>
 );
 
+/**
+ * Check icon component.
+ * @param {React.SVGProps<SVGSVGElement>} props - The props for the component.
+ * @returns {React.ReactElement} The rendered component.
+ */
 export const CheckIcon: React.FC<React.SVGProps<SVGSVGElement>> = (props) => (
     <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}>
         <polyline points="20 6 9 17 4 12"></polyline>
     </svg>
 );
 
+/**
+ * Share icon component.
+ * @param {React.SVGProps<SVGSVGElement>} props - The props for the component.
+ * @returns {React.ReactElement} The rendered component.
+ */
 export const ShareIcon: React.FC<React.SVGProps<SVGSVGElement>> = (props) => (
     <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}>
         <circle cx="18" cy="5" r="3"></circle>
@@ -111,6 +175,11 @@ export const ShareIcon: React.FC<React.SVGProps<SVGSVGElement>> = (props) => (
     </svg>
 );
 
+/**
+ * SwitchCamera icon component.
+ * @param {React.SVGProps<SVGSVGElement>} props - The props for the component.
+ * @returns {React.ReactElement} The rendered component.
+ */
 export const SwitchCameraIcon: React.FC<React.SVGProps<SVGSVGElement>> = (props) => (
     <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}>
         <path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"></path>
@@ -120,6 +189,11 @@ export const SwitchCameraIcon: React.FC<React.SVGProps<SVGSVGElement>> = (props)
     </svg>
 );
 
+/**
+ * Info icon component.
+ * @param {React.SVGProps<SVGSVGElement>} props - The props for the component.
+ * @returns {React.ReactElement} The rendered component.
+ */
 export const InfoIcon: React.FC<React.SVGProps<SVGSVGElement>> = (props) => (
     <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}>
         <circle cx="12" cy="12" r="10"></circle>
@@ -128,6 +202,11 @@ export const InfoIcon: React.FC<React.SVGProps<SVGSVGElement>> = (props) => (
     </svg>
 );
 
+/**
+ * ArrowLeft icon component.
+ * @param {React.SVGProps<SVGSVGElement>} props - The props for the component.
+ * @returns {React.ReactElement} The rendered component.
+ */
 export const ArrowLeftIcon: React.FC<React.SVGProps<SVGSVGElement>> = (props) => (
     <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}>
         <line x1="19" y1="12" x2="5" y2="12"></line>
@@ -135,6 +214,11 @@ export const ArrowLeftIcon: React.FC<React.SVGProps<SVGSVGElement>> = (props) =>
     </svg>
 );
 
+/**
+ * Wand icon component.
+ * @param {React.SVGProps<SVGSVGElement>} props - The props for the component.
+ * @returns {React.ReactElement} The rendered component.
+ */
 export const WandIcon: React.FC<React.SVGProps<SVGSVGElement>> = (props) => (
     <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}>
       <path d="M15 4V2" />
@@ -147,6 +231,11 @@ export const WandIcon: React.FC<React.SVGProps<SVGSVGElement>> = (props) => (
     </svg>
 );
 
+/**
+ * Link icon component.
+ * @param {React.SVGProps<SVGSVGElement>} props - The props for the component.
+ * @returns {React.ReactElement} The rendered component.
+ */
 export const LinkIcon: React.FC<React.SVGProps<SVGSVGElement>> = (props) => (
   <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}>
     <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.72"></path>
@@ -154,6 +243,11 @@ export const LinkIcon: React.FC<React.SVGProps<SVGSVGElement>> = (props) => (
   </svg>
 );
 
+/**
+ * Palette icon component.
+ * @param {React.SVGProps<SVGSVGElement>} props - The props for the component.
+ * @returns {React.ReactElement} The rendered component.
+ */
 export const PaletteIcon: React.FC<React.SVGProps<SVGSVGElement>> = (props) => (
     <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}>
         <circle cx="13.5" cy="6.5" r=".5" fill="currentColor"></circle>
@@ -164,6 +258,11 @@ export const PaletteIcon: React.FC<React.SVGProps<SVGSVGElement>> = (props) => (
     </svg>
 );
 
+/**
+ * Export icon component.
+ * @param {React.SVGProps<SVGSVGElement>} props - The props for the component.
+ * @returns {React.ReactElement} The rendered component.
+ */
 export const ExportIcon: React.FC<React.SVGProps<SVGSVGElement>> = (props) => (
     <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}>
         <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path>

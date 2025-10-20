@@ -19,6 +19,23 @@ declare var ort: any;
 // Set to `true` to disable the share button for testing layout.
 const DISABLE_SHARE_BUTTON = false;
 
+/**
+ * Props for the AnimationPlayer component.
+ * @interface AnimationPlayerProps
+ * @property {AnimationAssets} assets - The assets for the animation.
+ * @property {number} frameCount - The number of frames in the animation.
+ * @property {() => void} onRegenerate - Function to call to regenerate the animation.
+ * @property {() => void} onBack - Function to call to go back to the previous view.
+ * @property {() => void} onExport - Function to call to export the animation.
+ * @property {(effect: string, editPrompt?: string) => void} onPostProcess - Function to call to post-process the animation.
+ * @property {() => void} onDetectObjects - Function to call to detect objects in the animation.
+ * @property {BoundingBox[] | null} detectedObjects - The detected objects in the animation.
+ * @property {string | null} error - An error message to display.
+ * @property {() => void} clearError - Function to call to clear the error message.
+ * @property {string | null} styleImage - The style image for the animation.
+ * @property {number} postProcessStrength - The strength of the post-processing effect.
+ * @property {(strength: number) => void} onPostProcessStrengthChange - Function to call when the post-processing strength changes.
+ */
 interface AnimationPlayerProps {
   assets: AnimationAssets;
   frameCount: number;
@@ -35,6 +52,11 @@ interface AnimationPlayerProps {
   onPostProcessStrengthChange: (strength: number) => void;
 }
 
+/**
+ * Configuration for the animation.
+ * @interface AnimationConfig
+ * @property {number} speed - The speed of the animation in ms per frame.
+ */
 interface AnimationConfig {
   speed: number;
 }
@@ -74,7 +96,18 @@ const dataURLtoBlob = (dataurl: string): Blob => {
     return new Blob([u8arr], { type: mime });
 }
 
-
+/**
+ * A slider component for controlling a value.
+ * @param {object} props - The props for the component.
+ * @param {string} props.label - The label for the slider.
+ * @param {number} props.value - The current value of the slider.
+ * @param {number} props.min - The minimum value of the slider.
+ * @param {number} props.max - The maximum value of the slider.
+ * @param {number} props.step - The step value of the slider.
+ * @param {(value: number) => void} props.onChange - Function to call when the value of the slider changes.
+ * @param {string} props.helpText - The help text to display below the slider.
+ * @returns {React.ReactElement} The rendered component.
+ */
 const ControlSlider: React.FC<{
     label: string;
     value: number;
@@ -116,7 +149,13 @@ const ControlSlider: React.FC<{
 const MODEL_URL = 'https://huggingface.co/TensorStack/RIFE/resolve/main/model.onnx';
 const MODEL_INPUT_SIZE = 256;
 
-// Helper to convert an image to a padded tensor for the RIFE model
+/**
+ * Converts an image to a padded tensor for the RIFE model.
+ * @param {HTMLImageElement} image - The image to convert.
+ * @param {number} width - The width of the tensor.
+ * @param {number} height - The height of the tensor.
+ * @returns {any} The converted tensor.
+ */
 const imageToPaddedTensor = (image: HTMLImageElement, width: number, height: number): any => {
     const canvas = document.createElement('canvas');
     canvas.width = width;
@@ -139,7 +178,13 @@ const imageToPaddedTensor = (image: HTMLImageElement, width: number, height: num
     return new ort.Tensor('float32', float32Data, [1, 3, height, width]);
 };
 
-// Helper to convert an output tensor back to an image
+/**
+ * Converts an output tensor back to an image.
+ * @param {any} tensor - The tensor to convert.
+ * @param {number} originalWidth - The original width of the image.
+ * @param {number} originalHeight - The original height of the image.
+ * @returns {Promise<HTMLImageElement>} A promise that resolves to the converted image.
+ */
 const tensorToImage = async (tensor: any, originalWidth: number, originalHeight: number): Promise<HTMLImageElement> => {
     const tensorWidth = tensor.dims[3];
     const tensorHeight = tensor.dims[2];
@@ -181,6 +226,11 @@ const tensorToImage = async (tensor: any, originalWidth: number, originalHeight:
     });
 };
 
+/**
+ * A component for playing an animation.
+ * @param {AnimationPlayerProps} props - The props for the component.
+ * @returns {React.ReactElement} The rendered component.
+ */
 const AnimationPlayer: React.FC<AnimationPlayerProps> = ({ assets, frameCount, onRegenerate, onBack, onExport, onPostProcess, error, clearError, styleImage, onDetectObjects, detectedObjects, postProcessStrength, onPostProcessStrengthChange }) => {
   const [frames, setFrames] = useState<HTMLImageElement[]>([]);
   const [isLoading, setIsLoading] = useState(true);

@@ -10,6 +10,16 @@ import {
   ALLOWED_MOTION_TYPES,
 } from '../../../utils/fileValidation';
 
+/**
+ * Handles for the FileUploadManager component.
+ * @interface FileUploadManagerHandles
+ * @property {() => void} handleUploadClick - Function to handle the upload button click.
+ * @property {(type: 'main' | 'style' | 'motion') => void} handlePasteUrl - Function to handle pasting a URL.
+ * @property {(e: React.DragEvent<HTMLDivElement>) => void} handleDragEnter - Function to handle the drag enter event.
+ * @property {(e: React.DragEvent<HTMLDivElement>) => void} handleDragLeave - Function to handle the drag leave event.
+ * @property {(e: React.DragEvent<HTMLDivElement>) => void} handleDragOver - Function to handle the drag over event.
+ * @property {(e: React.DragEvent<HTMLDivElement>) => void} handleMainDrop - Function to handle the main drop event.
+ */
 export interface FileUploadManagerHandles {
   handleUploadClick: () => void;
   handlePasteUrl: (type: 'main' | 'style' | 'motion') => void;
@@ -19,6 +29,18 @@ export interface FileUploadManagerHandles {
   handleMainDrop: (e: React.DragEvent<HTMLDivElement>) => void;
 }
 
+/**
+ * Props for the FileUploadManager component.
+ * @interface FileUploadManagerProps
+ * @property {ImageState} imageState - The state of the image.
+ * @property {React.Dispatch<React.SetStateAction<ImageState>>} setImageState - Function to set the image state.
+ * @property {number} styleIntensity - The intensity of the style.
+ * @property {(intensity: number) => void} setStyleIntensity - Function to set the style intensity.
+ * @property {(prompt: string) => void} setStoryPrompt - Function to set the story prompt.
+ * @property {(state: AppStatus) => void} setAppState - Function to set the app state.
+ * @property {(message: string) => void} setLoadingMessage - Function to set the loading message.
+ * @property {(error: string | null) => void} setError - Function to set the error.
+ */
 interface FileUploadManagerProps {
   imageState: ImageState;
   setImageState: React.Dispatch<React.SetStateAction<ImageState>>;
@@ -30,6 +52,12 @@ interface FileUploadManagerProps {
   setError: (error: string | null) => void;
 }
 
+/**
+ * A component for managing file uploads.
+ * @param {FileUploadManagerProps} props - The props for the component.
+ * @param {React.Ref<FileUploadManagerHandles>} ref - The ref for the component.
+ * @returns {React.ReactElement} The rendered component.
+ */
 const FileUploadManager: React.FC<FileUploadManagerProps> = forwardRef<FileUploadManagerHandles, FileUploadManagerProps>(({
   imageState,
   setImageState,
