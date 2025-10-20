@@ -45,13 +45,13 @@ export const exportToGif = (
 };
 
 /**
- * Exports an animation as an MP4 video.
- * This will be implemented using the MediaRecorder API.
+ * Exports an animation as an MP4 video (technically WebM, but named as MP4).
+ * This is implemented using the MediaRecorder API.
  * @param frames An array of image data URLs representing the frames of the animation.
  * @param frameRate The frame rate of the animation in frames per second.
  * @param width The width of the exported video.
  * @param height The height of the exported video.
- * @returns A promise that resolves with the data URL of the exported MP4 video.
+ * @returns A promise that resolves with the data URL of the exported video.
  */
 export const exportToMp4 = (
   frames: string[],
@@ -59,13 +59,53 @@ export const exportToMp4 = (
   width: number,
   height: number
 ): Promise<string> => {
-  // To be implemented
-  return Promise.reject(new Error('MP4 export not yet implemented.'));
+  return new Promise(async (resolve, reject) => {
+    const canvas = document.createElement('canvas');
+    canvas.width = width;
+    canvas.height = height;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) {
+      return reject(new Error('Could not get canvas context'));
+    }
+
+    const stream = canvas.captureStream(frameRate);
+    const recorder = new MediaRecorder(stream, { mimeType: 'video/webm' });
+
+    const chunks: Blob[] = [];
+    recorder.ondataavailable = (e) => chunks.push(e.data);
+    recorder.onstop = () => {
+      const blob = new Blob(chunks, { type: 'video/webm' });
+      const reader = new FileReader();
+      reader.onload = () => resolve(reader.result as string);
+      reader.onerror = reject;
+      reader.readAsDataURL(blob);
+    };
+    recorder.onerror = (e) => reject(new Error('MediaRecorder error: ' + e));
+
+    recorder.start();
+
+    const images = await Promise.all(frames.map(frameSrc => {
+        const img = new Image();
+        img.src = frameSrc;
+        return new Promise<HTMLImageElement>(r => { img.onload = () => r(img) });
+    }));
+
+    let frameIndex = 0;
+    const intervalId = setInterval(() => {
+        if (frameIndex >= images.length) {
+            clearInterval(intervalId);
+            recorder.stop();
+            return;
+        }
+        ctx.drawImage(images[frameIndex], 0, 0, width, height);
+        frameIndex++;
+    }, 1000 / frameRate);
+  });
 };
 
 /**
  * Exports an animation as a WebP image.
- * This will be implemented using the Canvas API.
+ * This is currently not implemented due to browser limitations.
  * @param frames An array of image data URLs representing the frames of the animation.
  * @param frameRate The frame rate of the animation in frames per second.
  * @param width The width of the exported image.
@@ -78,8 +118,9 @@ export const exportToWebP = (
   width: number,
   height: number
 ): Promise<string> => {
-  // To be implemented
-  return Promise.reject(new Error('WebP export not yet implemented.'));
+  // Creating animated WebP is not natively supported by browsers.
+  // This would require a third-party library to assemble the frames.
+  return Promise.reject(new Error('Animated WebP export not yet implemented.'));
 };
 
 /**
@@ -88,6 +129,5 @@ export const exportToWebP = (
  * @returns An array of data URLs, each representing a PNG image.
  */
 export const exportToPngSequence = (frames: string[]): string[] => {
-  // To be implemented
-  return [];
+  return frames;
 };
