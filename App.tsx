@@ -18,6 +18,7 @@ import { useThemeManager } from 'src/hooks/useThemeManager';
 import ThemeSwitcher from 'src/components/features/theme/ThemeSwitcher';
 import ThemeCustomizer from 'src/components/features/theme/ThemeCustomizer';
 import FileUploadManager, { FileUploadManagerHandles } from 'src/components/features/uploader/FileUploadManager';
+import AssetManager from 'src/components/features/uploader/AssetManager';
 import ErrorBoundary from 'src/components/ErrorBoundary';
 import { useAnimationCreator } from 'src/hooks/useAnimationCreator';
 import { useObjectDetection } from 'src/hooks/useObjectDetection';
@@ -101,7 +102,12 @@ const App: React.FC = () => {
     (payload) => dispatch({ type: 'SET_ERROR', payload }),
     (payload) => dispatch({ type: 'SET_ANIMATION_ASSETS', payload }),
     (payload) => dispatch({ type: 'SET_STORY_PROMPT', payload }),
+    state.selectedAsset,
   );
+
+  const handleAssetSelect = (asset: any) => {
+    dispatch({ type: 'SET_SELECTED_ASSET', payload: asset });
+  };
 
   const { handleDetectObjects } = useObjectDetection(
     animationAssets,
@@ -362,6 +368,7 @@ const App: React.FC = () => {
               setLoadingMessage={(payload) => dispatch({ type: 'SET_LOADING_MESSAGE', payload })}
               setError={(payload) => dispatch({ type: 'SET_ERROR', payload })}
             />
+            <AssetManager onAssetSelect={handleAssetSelect} />
             {error && (() => {
               const errorInfo = categorizeError(error);
               const errorTitle = getErrorTitle(errorInfo);

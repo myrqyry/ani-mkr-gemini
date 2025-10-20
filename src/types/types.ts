@@ -78,6 +78,7 @@ export interface AppState {
   hasMultipleCameras: boolean;
   isCameraOpen: boolean;
   isExportModalOpen: boolean;
+  selectedAsset: any;
 }
 
 /**

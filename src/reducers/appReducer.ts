@@ -22,6 +22,8 @@ export const initialState: AppState = {
   postProcessStrength: 0.9,
   hasMultipleCameras: false,
   isCameraOpen: false,
+  isExportModalOpen: false,
+  selectedAsset: null,
 };
 
 /**
@@ -60,6 +62,10 @@ export const appReducer = (state: AppState, action: AppAction): AppState => {
       return { ...state, hasMultipleCameras: action.payload };
     case 'SET_IS_CAMERA_OPEN':
       return { ...state, isCameraOpen: action.payload };
+    case 'SET_IS_EXPORT_MODAL_OPEN':
+      return { ...state, isExportModalOpen: action.payload };
+    case 'SET_SELECTED_ASSET':
+      return { ...state, selectedAsset: action.payload };
     default:
       return state;
   }
