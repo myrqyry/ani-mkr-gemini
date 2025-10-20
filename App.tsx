@@ -10,6 +10,7 @@ import { AnimationAssets, BoundingBox } from 'src/services/geminiService';
 import { promptSuggestions } from 'prompts';
 import CameraView, { CameraViewHandles } from 'src/components/CameraView';
 import AnimationPlayer from 'src/components/AnimationPlayer';
+import ExportModal from 'src/components/ExportModal';
 import LoadingOverlay from 'src/components/LoadingOverlay';
 import { UploadIcon, SwitchCameraIcon, XCircleIcon, CameraIcon, LinkIcon } from 'src/components/icons';
 import BanamimatorButton from 'src/components/BanamimatorButton';
@@ -78,6 +79,7 @@ const App: React.FC = () => {
     postProcessStrength,
     hasMultipleCameras,
     isCameraOpen,
+    isExportModalOpen,
   } = state;
 
   const cameraViewRef = useRef<CameraViewHandles>(null);
@@ -494,6 +496,7 @@ const App: React.FC = () => {
             frameCount={frameCount} 
             onRegenerate={() => handleCreateAnimation(true)} 
             onBack={handleBack}
+            onExport={() => dispatch({ type: 'SET_IS_EXPORT_MODAL_OPEN', payload: true })}
             onPostProcess={handlePostProcess}
             onDetectObjects={handleDetectObjects}
             detectedObjects={detectedObjects}
@@ -545,6 +548,14 @@ const App: React.FC = () => {
                 onClose={() => setIsCustomizerOpen(false)}
             />
         )}
+      {isExportModalOpen && animationAssets && (
+        <ExportModal
+          frames={animationAssets.frames}
+          width={512}
+          height={512}
+          onClose={() => dispatch({ type: 'SET_IS_EXPORT_MODAL_OPEN', payload: false })}
+        />
+      )}
     </div>
   );
 };

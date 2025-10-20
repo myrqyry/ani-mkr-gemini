@@ -196,6 +196,7 @@ const BanamimatorButton: React.FC<BanamimatorButtonProps> = ({ onClick, 'aria-la
       className={`transition-colors duration-200 focus:outline-none rounded-full p-6 bg-gradient-to-br from-[var(--color-accent)] to-[var(--color-special)] shadow-lg ${disabled ? 'filter grayscale opacity-50 cursor-not-allowed' : ''}`}
       aria-label={ariaLabel}
       aria-disabled={disabled}
+      data-testid="bananimate-button"
       style={{ 
         perspective: '1000px',
         transformStyle: 'preserve-3d',

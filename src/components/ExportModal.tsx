@@ -125,7 +125,7 @@ const ExportModal: React.FC<ExportModalProps> = ({ frames, width, height, onClos
   };
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50" data-testid="export-modal">
       <div className="bg-[var(--color-surface)] p-6 rounded-lg shadow-xl w-full max-w-md">
         <h2 className="text-2xl font-bold mb-4">Export Animation</h2>
         {/* Format Selection */}

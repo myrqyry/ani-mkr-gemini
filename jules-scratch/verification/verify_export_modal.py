@@ -4,29 +4,29 @@ from playwright.sync_api import sync_playwright
 def run(playwright):
     browser = playwright.chromium.launch(headless=True)
     page = browser.new_page()
-    page.goto("http://localhost:3000/")
+    page.goto("http://localhost:3000")
 
-    # Wait for the file input to be visible
-    file_input = page.locator('input[type="file"]')
-    file_input.wait_for(state="visible", timeout=60000)
+    # 1. Wait for the textarea to be visible and then fill it
+    textarea_selector = 'textarea[aria-label="Animation prompt"]'
+    page.wait_for_selector(textarea_selector)
+    page.fill(textarea_selector, 'A cat dancing in the rain')
 
-    # Upload an image
-    file_input.set_input_files('src/assets/style-images/style_0.jpg')
+    # 2. Wait for the "Bananimate" button to be enabled and then click it
+    button_selector = '[data-testid="bananimate-button"]:not([disabled])'
+    page.wait_for_selector(button_selector)
+    page.click(button_selector)
 
-    # Click the generate button
-    page.click('button:has-text("Banana-imate!")')
+    # 3. Wait for the animation player to appear
+    page.wait_for_selector('[data-testid="animation-canvas"]', timeout=60000)
 
-    # Wait for the animation player to appear
-    page.wait_for_selector('[data-testid="animation-canvas"]')
+    # 4. Click the "Export" button
+    page.click('button:has-text("Export")')
 
-    # Click the export button
-    page.click('[data-testid="export-gif-button"]')
+    # 5. Wait for the export modal to appear
+    page.wait_for_selector('[data-testid="export-modal"]')
 
-    # Wait for the export modal to appear
-    page.wait_for_selector('.bg-opacity-50')
-
-    # Take a screenshot of the export modal
-    page.screenshot(path="jules-scratch/verification/export_modal.png")
+    # 6. Take a screenshot
+    page.screenshot(path="jules-scratch/verification/verification.png")
 
     browser.close()
 
