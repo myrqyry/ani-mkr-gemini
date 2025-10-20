@@ -43,9 +43,11 @@ export interface AppState {
   postProcessStrength: number;
   hasMultipleCameras: boolean;
   isCameraOpen: boolean;
+  isExportModalOpen: boolean;
 }
 
 export type AppAction =
+  | { type: 'SET_IS_EXPORT_MODAL_OPEN'; payload: boolean }
   | { type: 'SET_APP_STATUS'; payload: AppStatus }
   | { type: 'SET_IMAGE_STATE'; payload: Partial<ImageState> }
   | { type: 'SET_STYLE_INTENSITY'; payload: number }

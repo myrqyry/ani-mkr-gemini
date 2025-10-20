@@ -8,9 +8,7 @@ import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { AnimationAssets, BoundingBox } from '../services/geminiService';
 import { Frame } from '../types';
 import BananaLoader from './BananaLoader';
-import { InfoIcon, XCircleIcon, SettingsIcon, LoaderIcon, WandIcon } from './icons';
-import AnimatedExportButton from './AnimatedExportButton';
-import ExportModal from './ExportModal';
+import { ExportIcon, InfoIcon, XCircleIcon, SettingsIcon, LoaderIcon, WandIcon } from './icons';
 
 // Add declaration for the gifshot library loaded from CDN
 declare var gifshot: any;
@@ -26,6 +24,7 @@ interface AnimationPlayerProps {
   frameCount: number;
   onRegenerate: () => void;
   onBack: () => void;
+  onExport: () => void;
   onPostProcess: (effect: string, editPrompt?: string) => void;
   onDetectObjects: () => void;
   detectedObjects: BoundingBox[] | null;
@@ -182,12 +181,10 @@ const tensorToImage = async (tensor: any, originalWidth: number, originalHeight:
     });
 };
 
-const AnimationPlayer: React.FC<AnimationPlayerProps> = ({ assets, frameCount, onRegenerate, onBack, onPostProcess, error, clearError, styleImage, onDetectObjects, detectedObjects, postProcessStrength, onPostProcessStrengthChange }) => {
+const AnimationPlayer: React.FC<AnimationPlayerProps> = ({ assets, frameCount, onRegenerate, onBack, onExport, onPostProcess, error, clearError, styleImage, onDetectObjects, detectedObjects, postProcessStrength, onPostProcessStrengthChange }) => {
   const [frames, setFrames] = useState<HTMLImageElement[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [isExporting, setIsExporting] = useState(false);
   const [isSharing, setIsSharing] = useState(false);
-  const [isExportModalOpen, setIsExportModalOpen] = useState(false);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [showControls, setShowControls] = useState(false);
   const [config, setConfig] = useState<AnimationConfig>({
@@ -568,10 +565,6 @@ const AnimationPlayer: React.FC<AnimationPlayerProps> = ({ assets, frameCount, o
   }, [viewMode, spriteSheetImage, displayFrames, getImageDisplayDimensions, detectedObjects]);
 
 
- const handleExport = () => {
-    setIsExportModalOpen(true);
- };
- 
   const handleShare = () => {
     if (viewMode === 'spritesheet') {
         setViewMode('animation');
@@ -591,14 +584,6 @@ const AnimationPlayer: React.FC<AnimationPlayerProps> = ({ assets, frameCount, o
 
   return (
     <div className="flex flex-col items-center justify-center w-full max-w-4xl">
-      {isExportModalOpen && (
-        <ExportModal
-          frames={currentFrames.map(f => f.src)}
-          width={canvasRef.current?.width || 512}
-          height={canvasRef.current?.height || 512}
-          onClose={() => setIsExportModalOpen(false)}
-        />
-      )}
       {error && (
         <div className="w-full max-w-lg bg-[var(--color-danger-surface)] border border-[var(--color-danger)] text-[var(--color-danger-text)] px-4 py-3 rounded-lg relative mb-4 flex items-center justify-between animate-shake" role="alert">
           <div className="pr-4">
@@ -768,12 +753,10 @@ const AnimationPlayer: React.FC<AnimationPlayerProps> = ({ assets, frameCount, o
     <div className={`grid ${isShareAvailable ? 'grid-cols-2 sm:grid-cols-4' : 'grid-cols-3'} gap-2 w-full max-w-lg mb-4`}>
         <button onClick={onBack} className="bg-[var(--color-button)] text-white font-bold py-2 px-4 rounded-lg hover:bg-[var(--color-button-hover)] transition-colors duration-200 flex items-center justify-center focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-black focus-visible:ring-[var(--color-accent)]">Edit</button>
         <button onClick={onRegenerate} className="bg-[var(--color-danger)] text-white font-bold py-2 px-4 rounded-lg hover:opacity-90 transition-opacity duration-200 flex items-center justify-center focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-black focus-visible:ring-[var(--color-accent)]">Regenerate</button>
-        <AnimatedExportButton 
-            onClick={handleExport} 
-            disabled={isExporting} 
-            isExporting={isExporting}
-            data-testid="export-gif-button"
-        />
+        <button onClick={onExport} className="bg-[var(--color-success)] text-white font-bold py-2 px-4 rounded-lg hover:bg-[var(--color-success-hover)] transition-colors duration-200 flex items-center justify-center focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-black focus-visible:ring-[var(--color-accent)]">
+          <ExportIcon className="w-5 h-5 mr-2" />
+          Export
+        </button>
         {isShareAvailable && (
             <button onClick={handleShare} disabled={isSharing} className="bg-[var(--color-info)] text-white font-bold py-2 px-4 rounded-lg hover:bg-[var(--color-info-hover)] transition-colors duration-200 flex items-center justify-center disabled:opacity-50 disabled:cursor-not-allowed focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-black focus-visible:ring-[var(--color-accent)]">
                 {isSharing ? 'Sharing...' : 'Share'}

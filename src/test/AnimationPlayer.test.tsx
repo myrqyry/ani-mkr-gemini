@@ -1,6 +1,7 @@
+
 import React from 'react';
 import { render, screen, fireEvent } from '@testing-library/react';
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 import AnimationPlayer from 'src/components/AnimationPlayer';
 import { AnimationAssets } from 'src/services/geminiService';
 
@@ -10,42 +11,35 @@ const mockAssets: AnimationAssets = {
     mimeType: 'image/png',
   },
   frameDuration: 120,
+  frames: [],
 };
 
-const mockOnRegenerate = vi.fn();
-const mockOnBack = vi.fn();
-const mockOnPostProcess = vi.fn();
-const mockOnDetectObjects = vi.fn();
-const mockClearError = vi.fn();
-const mockOnPostProcessStrengthChange = vi.fn();
-
 describe('AnimationPlayer component', () => {
-    it('should open the export modal when the export button is clicked', async () => {
-        render(
-            <AnimationPlayer
-                assets={mockAssets}
-                frameCount={9}
-                onRegenerate={mockOnRegenerate}
-                onBack={mockOnBack}
-                onPostProcess={mockOnPostProcess}
-                onDetectObjects={mockOnDetectObjects}
-                detectedObjects={null}
-                error={null}
-                clearError={mockClearError}
-                styleImage={null}
-                postProcessStrength={0.9}
-                onPostProcessStrengthChange={mockOnPostProcessStrengthChange}
-            />
-        );
+  it('should call onExport when the export button is clicked', async () => {
+    const mockOnExport = vi.fn();
+    render(
+      <AnimationPlayer
+        assets={mockAssets}
+        frameCount={9}
+        onRegenerate={vi.fn()}
+        onBack={vi.fn()}
+        onExport={mockOnExport}
+        onPostProcess={vi.fn()}
+        onDetectObjects={vi.fn()}
+        detectedObjects={null}
+        error={null}
+        clearError={vi.fn()}
+        styleImage={null}
+        postProcessStrength={0.9}
+        onPostProcessStrengthChange={vi.fn()}
+      />
+    );
 
-        // Wait for the animation canvas to be ready
-        await screen.findByTestId('animation-canvas');
+    await screen.findByTestId('animation-canvas');
 
-        const exportButton = screen.getByTestId('export-gif-button');
-        fireEvent.click(exportButton);
+    const exportButton = screen.getByRole('button', { name: /export/i });
+    fireEvent.click(exportButton);
 
-        // Check that the modal is rendered
-        const modalTitle = await screen.findByText('Export Animation');
-        expect(modalTitle).toBeInTheDocument();
-    });
+    expect(mockOnExport).toHaveBeenCalledTimes(1);
+  });
 });
