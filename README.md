@@ -2,9 +2,9 @@
 <img width="1200" height="475" alt="GHBanner" src="https://github.com/user-attachments/assets/0aa67016-6eaf-458a-adb2-6e31a0763ed6" />
 </div>
 
-# Banamimator
+# ani-mkr-gemini
 
-Banamimator is a web-based application that allows you to create animations from images and text prompts. It uses the Gemini API to generate sprite sheets, which are then animated in the browser.
+ani-mkr-gemini is a web-based application that allows you to create animations from images and text prompts. It uses the Gemini API to generate sprite sheets, which are then animated in the browser.
 
 ## Features
 
@@ -54,7 +54,7 @@ Banamimator is a web-based application that allows you to create animations from
 2. **(Optional) Add an image:** You can upload an image, use your camera, or paste a URL to use as a starting point for your animation.
 3. **(Optional) Add a style image:** You can upload a style image to apply its style to your animation.
 4. **(Optional) Extract motion from a GIF:** You can upload a GIF to extract its motion and apply it to your animation.
-5. **Click "Bananimate":** The application will generate a sprite sheet and display the animation.
+5. **Click "Create":** The application will generate a sprite sheet and display the animation.
 6. **(Optional) Apply post-processing effects:** You can apply various effects to your animation, such as improving consistency, removing the background, and more.
 7. **Export your animation:** You can export your animation as a GIF, MP4, or PNG sequence.
 

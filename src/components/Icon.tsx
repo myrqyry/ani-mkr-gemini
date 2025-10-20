@@ -6,20 +6,20 @@
 import React from 'react';
 
 /**
- * Props for the BananaIcon component.
- * @interface BananaIconProps
+ * Props for the Icon component.
+ * @interface IconProps
  * @property {string} [className] - The class name for the component.
  */
-interface BananaIconProps {
+interface IconProps {
   className?: string;
 }
 
 /**
- * A banana icon component.
- * @param {BananaIconProps} props - The props for the component.
+ * An icon component.
+ * @param {IconProps} props - The props for the component.
  * @returns {React.ReactElement} The rendered component.
  */
-const BananaIcon: React.FC<BananaIconProps> = ({ className = "w-36 h-36" }) => {
+const Icon: React.FC<IconProps> = ({ className = "w-36 h-36" }) => {
   return (
     <svg
       viewBox="0 0 200 200"
@@ -72,4 +72,4 @@ const BananaIcon: React.FC<BananaIconProps> = ({ className = "w-36 h-36" }) => {
   );
 };
 
-export default BananaIcon;
+export default Icon;
