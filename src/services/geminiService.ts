@@ -106,7 +106,8 @@ export const generateAnimationAssets = async (
     mimeType: string | null,
     imagePrompt: string,
     onProgress: (message: string) => void,
-    signal?: AbortSignal
+    signal?: AbortSignal,
+    fileUri?: string,
 ): Promise<AnimationAssets | null> => {
     try {
         if (signal?.aborted) {
@@ -121,6 +122,8 @@ export const generateAnimationAssets = async (
             body: JSON.stringify({
                 imageData: base64UserImage,
                 prompt: imagePrompt,
+                mimeType: mimeType,
+                fileUri: fileUri,
             }),
             signal,
         });
@@ -406,3 +409,25 @@ export const analyzeAnimation = async (
         throw new Error(`Failed to analyze animation. ${error instanceof Error ? error.message : ''}`);
     }
 };
+
+export const uploadFile = async (file: string, mimeType: string) => {
+    try {
+        const response = await fetch('/api/upload-file', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                file,
+                mimeType,
+            }),
+        });
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        return await response.json();
+    } catch (error) {
+        console.error("Error during file upload:", error);
+        throw new Error(`Failed to upload file. ${error instanceof Error ? error.message : ''}`);
+    }
+}

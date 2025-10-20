@@ -26,6 +26,7 @@ export const useAnimationCreator = (
   setError: React.Dispatch<React.SetStateAction<string | null>>,
   setAnimationAssets: React.Dispatch<React.SetStateAction<AnimationAssets | null>>,
   setStoryPrompt: React.Dispatch<React.SetStateAction<string>>,
+  selectedAsset: any,
 ) => {
   const abortControllerRef = useRef<AbortController | null>(null);
   const promptWasInitiallyEmpty = useRef<boolean>(false);
@@ -102,7 +103,8 @@ export const useAnimationCreator = (
             setLoadingMessage(message);
           }
         },
-        abortControllerRef.current.signal
+        abortControllerRef.current.signal,
+        selectedAsset?.uri
       );
 
       if (!abortControllerRef.current?.signal.aborted) {
@@ -119,7 +121,7 @@ export const useAnimationCreator = (
         setAppState(AppStatus.Capturing);
       }
     }
-  }, [storyPrompt, imageState.original, frameCount, setAppState, setLoadingMessage, setError, setAnimationAssets, setStoryPrompt]);
+  }, [storyPrompt, imageState.original, selectedAsset, frameCount, setAppState, setLoadingMessage, setError, setAnimationAssets, setStoryPrompt]);
 
   return { handleCreateAnimation };
 };

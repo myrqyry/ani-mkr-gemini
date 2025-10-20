@@ -9,7 +9,7 @@ dotenv.config();
 const app = express();
 const port = 3001;
 
-app.use(express.json());
+app.use(express.json({ limit: '50mb' }));
 
 const ai = new GoogleGenerativeAI({ apiKey: process.env.GEMINI_API_KEY });
 
@@ -26,20 +26,31 @@ const apiLimiter = rateLimit({
  * @param {object} req.body - The request body.
  * @param {string} req.body.imageData - The base64-encoded image data.
  * @param {string} req.body.prompt - The prompt for the animation.
+ * @param {string} req.body.mimeType - The mime type of the image.
  * @param {object} res - The response object.
  */
 app.post('/api/generate-animation', apiLimiter, async (req, res) => {
   try {
-    const { imageData, prompt } = req.body;
+    const { imageData, prompt, mimeType, fileUri } = req.body;
 
-    const model = ai.getGenerativeModel({ model: 'gemini-2.5-flash-image-preview' });
+    const model = ai.getGenerativeModel({ model: 'gemini-2.5-flash' });
 
-    const imagePart = {
-      inlineData: {
-        data: imageData,
-        mimeType: 'image/png',
-      },
-    };
+    let imagePart;
+    if (fileUri) {
+      imagePart = {
+        fileData: {
+          mimeType,
+          fileUri,
+        },
+      };
+    } else {
+      imagePart = {
+        inlineData: {
+          data: imageData,
+          mimeType: mimeType || 'image/png',
+        },
+      };
+    }
 
     const result = await model.generateContentStream([prompt, imagePart]);
 
@@ -58,4 +69,24 @@ app.post('/api/generate-animation', apiLimiter, async (req, res) => {
 
 app.listen(port, () => {
   console.log(`Server listening at http://localhost:${port}`);
+});
+
+/**
+ * @route POST /api/upload-file
+ * @description Uploads a file to the Gemini File API.
+ * @param {object} req - The request object.
+ * @param {object} req.body - The request body.
+ * @param {string} req.body.file - The base64-encoded file data.
+ * @param {string} req.body.mimeType - The mime type of the file.
+ * @param {object} res - The response object.
+ */
+app.post('/api/upload-file', apiLimiter, async (req, res) => {
+  try {
+    const { file, mimeType } = req.body;
+    const result = await ai.uploadFile(file, { mimeType });
+    res.json(result);
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: 'Failed to upload file' });
+  }
 });
