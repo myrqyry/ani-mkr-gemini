@@ -4,6 +4,10 @@
 */
 import { AnimationAssets, BoundingBox } from '../services/geminiService';
 
+/**
+ * The status of the app.
+ * @enum {number}
+ */
 export enum AppStatus {
   Capturing,
   Processing,
@@ -11,6 +15,14 @@ export enum AppStatus {
   Error,
 }
 
+/**
+ * A frame in an animation.
+ * @interface Frame
+ * @property {number} x - The x-coordinate of the frame.
+ * @property {number} y - The y-coordinate of the frame.
+ * @property {number} width - The width of the frame.
+ * @property {number} height - The height of the frame.
+ */
 export interface Frame {
   x: number;
   y: number;
@@ -18,16 +30,38 @@ export interface Frame {
   height: number;
 }
 
+/**
+ * The available themes.
+ * @typedef {'default' | 'rose-pine' | 'catppuccin'} Theme
+ */
 export type Theme = 'default' | 'rose-pine' | 'catppuccin';
 
+/**
+ * The custom themes.
+ * @typedef {Partial<Record<Theme, Partial<Record<string, string>>>>} CustomThemes
+ */
 export type CustomThemes = Partial<Record<Theme, Partial<Record<string, string>>>>;
 
+/**
+ * The state of the image.
+ * @interface ImageState
+ * @property {string | null} original - The original image.
+ * @property {string | null} style - The style image.
+ * @property {string | null} motion - The motion image.
+ */
 export interface ImageState {
   original: string | null;
   style: string | null;
   motion: string | null;
 }
 
+/**
+ * The state of the app.
+ * @interface AppState
+ * @property {AppStatus} appStatus - The status of the app.
+ * @property {ImageState} imageState - The state of the image.
+ * @property {number} styleIntensity - The intensity of the style.
+ */
 export interface AppState {
   appStatus: AppStatus;
   imageState: ImageState;
@@ -46,6 +80,16 @@ export interface AppState {
   isExportModalOpen: boolean;
 }
 
+/**
+ * The actions that can be dispatched to the app reducer.
+ * @typedef {object} AppAction
+ * @property {'SET_IS_EXPORT_MODAL_OPEN'} type - The type of the action.
+ * @property {boolean} payload - The payload for the action.
+ * @property {'SET_APP_STATUS'} type - The type of the action.
+ * @property {AppStatus} payload - The payload for the action.
+ * @property {'SET_IMAGE_STATE'} type - The type of the action.
+ * @property {Partial<ImageState>} payload - The payload for the action.
+ */
 export type AppAction =
   | { type: 'SET_IS_EXPORT_MODAL_OPEN'; payload: boolean }
   | { type: 'SET_APP_STATUS'; payload: AppStatus }

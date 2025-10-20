@@ -1,11 +1,17 @@
 import { Theme } from '../types/types';
 
+/**
+ * The available themes.
+ */
 export const THEMES: { id: Theme; name: string }[] = [
   { id: 'default', name: 'Default' },
   { id: 'rose-pine', name: 'Rosé Pine' },
   { id: 'catppuccin', name: 'Catppuccin' },
 ];
 
+/**
+ * The editable theme properties.
+ */
 export const EDITABLE_THEME_PROPERTIES = [
   { cssVar: '--color-background', label: 'Background' },
   { cssVar: '--color-surface', label: 'Surface' },
@@ -15,6 +21,9 @@ export const EDITABLE_THEME_PROPERTIES = [
   { cssVar: '--color-danger', label: 'Danger' },
 ];
 
+/**
+ * The theme palettes.
+ */
 export const THEME_PALETTES: Record<Theme, { name: string; hex: string }[]> = {
   default: [
     { name: 'Black', hex: '#000000' },

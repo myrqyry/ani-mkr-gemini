@@ -1,5 +1,8 @@
 import { AppState, AppAction, AppStatus } from '../types/types';
 
+/**
+ * The initial state for the app.
+ */
 export const initialState: AppState = {
   appStatus: AppStatus.Capturing,
   imageState: {
@@ -21,6 +24,12 @@ export const initialState: AppState = {
   isCameraOpen: false,
 };
 
+/**
+ * The reducer for the app.
+ * @param {AppState} state - The current state.
+ * @param {AppAction} action - The action to perform.
+ * @returns {AppState} The new state.
+ */
 export const appReducer = (state: AppState, action: AppAction): AppState => {
   switch (action.type) {
     case 'SET_APP_STATUS':

@@ -1,3 +1,11 @@
+/**
+ * Options for resizing an image.
+ * @typedef {object} ResizeOptions
+ * @property {number} maxSize - The maximum size of the image.
+ * @property {boolean} [squareCrop] - Whether to crop the image to a square.
+ * @property {'image/jpeg' | 'image/webp'} [mime] - The MIME type of the image.
+ * @property {number} [quality] - The quality of the image.
+ */
 export type ResizeOptions = {
   maxSize: number;
   squareCrop?: boolean;
@@ -8,7 +16,9 @@ export type ResizeOptions = {
 const MAX_CACHE_SIZE = 50;
 const imageCache = new Map<string, { dataUrl: string; mime: string; timestamp: number }>();
 
-// Add cache cleanup logic
+/**
+ * Cleans up the image cache.
+ */
 const cleanupCache = () => {
   if (imageCache.size >= MAX_CACHE_SIZE) {
     const entries = Array.from(imageCache.entries());
@@ -19,6 +29,12 @@ const cleanupCache = () => {
   }
 };
 
+/**
+ * Resizes an image.
+ * @param {string} dataUrl - The data URL of the image.
+ * @param {ResizeOptions} options - The options for resizing the image.
+ * @returns {Promise<{ dataUrl: string; mime: string }>} A promise that resolves to the resized image.
+ */
 export async function resizeImage(
   dataUrl: string,
   options: ResizeOptions,
@@ -86,6 +102,11 @@ export async function resizeImage(
   return result;
 }
 
+/**
+ * Loads an image from a source.
+ * @param {string} src - The source of the image.
+ * @returns {Promise<HTMLImageElement>} A promise that resolves to the loaded image.
+ */
 export function loadImage(src: string): Promise<HTMLImageElement> {
   return new Promise((resolve, reject) => {
     const img = new Image();

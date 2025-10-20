@@ -1,13 +1,26 @@
 import React, { Component, ErrorInfo, ReactNode } from 'react';
 
+/**
+ * Props for the ErrorBoundary component.
+ * @interface Props
+ * @property {ReactNode} children - The children to render.
+ */
 interface Props {
   children: ReactNode;
 }
 
+/**
+ * State for the ErrorBoundary component.
+ * @interface State
+ * @property {boolean} hasError - Whether an error has occurred.
+ */
 interface State {
   hasError: boolean;
 }
 
+/**
+ * A component that catches JavaScript errors anywhere in its child component tree.
+ */
 class ErrorBoundary extends Component<Props, State> {
   public state: State = {
     hasError: false,

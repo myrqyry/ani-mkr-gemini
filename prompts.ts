@@ -3,6 +3,10 @@
  * SPDX-License-Identifier: Apache-2.0
 */
 
+/**
+ * A list of prompt suggestions.
+ * @type {{emoji: string, prompt: string}[]}
+ */
 export const promptSuggestions = [
   { emoji: '🤖', prompt: 'Make a cool micro sci-fi story spanning a Millenia about a robot and its maker.' },
   { emoji: '💡', prompt: 'I just had a great idea! in style of a hand-drawn pencil sketch.' },
@@ -12,13 +16,20 @@ export const promptSuggestions = [
   { emoji: '🏃', prompt: 'Tell them I\'m "On my way!", 80s video game style' },
 ];
 
+/**
+ * Builds the creative instruction for the animation.
+ * @param {string} storyPrompt - The prompt for the story.
+ * @param {string | null} originalImage - The original image.
+ * @param {number} frameCount - The number of frames in the animation.
+ * @returns {string} The creative instruction.
+ */
 export const buildCreativeInstruction = (
-  storyPrompt: string, 
-  originalImage: string | null, 
+  storyPrompt: string,
+  originalImage: string | null,
   frameCount: number
 ): string => {
   const gridDim = Math.sqrt(frameCount);
-  
+
   const motionInstruction = `
 MOTION REQUIREMENTS:
 - The animation must depict a single, continuous, and chronologically ordered sequence of motion. Each frame must logically follow the previous one.
@@ -77,6 +88,10 @@ Example of the JSON part:
 `;
 };
 
+/**
+ * Builds the prompt for object detection.
+ * @returns {string} The prompt for object detection.
+ */
 export const buildObjectDetectionPrompt = (): string => {
   return `Detect all of the prominent items in the image.
 The output should be a JSON list where each item represents a detected object.
@@ -86,7 +101,16 @@ Each item must have two keys:
 Do not include any text or markdown formatting outside of the JSON list.`;
 };
 
-
+/**
+ * Builds the prompt for post-processing.
+ * @param {string} effect - The effect to apply.
+ * @param {number} frameCount - The number of frames in the animation.
+ * @param {number} frameDuration - The duration of each frame in ms.
+ * @param {object} [options] - The options for the post-processing.
+ * @param {number} [options.styleIntensity] - The intensity of the style.
+ * @param {string} [options.editPrompt] - The prompt for the edit.
+ * @returns {string} The prompt for post-processing.
+ */
 export const buildPostProcessPrompt = (
   effect: string,
   frameCount: number,
@@ -225,6 +249,10 @@ Example of the JSON part:
 `;
 };
 
+/**
+ * Builds the prompt for analyzing an animation.
+ * @returns {string} The prompt for analyzing an animation.
+ */
 export const buildAnalysisPrompt = (): string => {
   return `
 PRIMARY GOAL: Analyze the motion in an animated GIF and describe it as a reusable prompt.
