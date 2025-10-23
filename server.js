@@ -17,21 +17,11 @@ app.use(express.json({ limit: '50mb' }));
 const ai = new GoogleGenerativeAI({ apiKey: process.env.GEMINI_API_KEY });
 
 const readDB = () => {
-  if (!fs.existsSync(DB_FILE)) {
-    return {};
-  }
-
-  try {
-    const data = fs.readFileSync(DB_FILE, 'utf-8');
-    // Handle empty file case
-    if (data.trim() === '') {
-        return {};
-    }
+  if (fs.existsSync(DB_FILE)) {
+    const data = fs.readFileSync(DB_FILE);
     return JSON.parse(data);
-  } catch (error) {
-    console.error('Error reading or parsing DB file:', error);
-    return {}; // Return empty object on error to prevent crash
   }
+  return {};
 };
 
 const writeDB = (data) => {
@@ -92,10 +82,6 @@ app.post('/api/generate-animation', apiLimiter, async (req, res) => {
   }
 });
 
-app.listen(port, () => {
-  console.log(`Server listening at http://localhost:${port}`);
-});
-
 /**
  * @route POST /api/upload-file
  * @description Uploads a file to the Gemini File API.
@@ -113,6 +99,115 @@ app.post('/api/upload-file', apiLimiter, async (req, res) => {
   } catch (error) {
     console.error(error);
     res.status(500).json({ error: 'Failed to upload file' });
+  }
+});
+
+/**
+ * @route POST /api/post-process
+ * @description Post-processes an animation.
+ * @param {object} req - The request object.
+ * @param {object} req.body - The request body.
+ * @param {string} req.body.base64SpriteSheet - The base64-encoded sprite sheet.
+ * @param {string} req.body.mimeType - The mime type of the sprite sheet.
+ * @param {string} req.body.postProcessPrompt - The prompt for post-processing.
+ * @param {string} [req.body.base64StyleImage] - The base64-encoded style image.
+ * @param {string} [req.body.styleMimeType] - The mime type of the style image.
+ * @param {number} [req.body.temperature] - The temperature for the model.
+ * @param {object} res - The response.
+ */
+app.post('/api/post-process', apiLimiter, async (req, res) => {
+  try {
+    const {
+      base64SpriteSheet,
+      mimeType,
+      postProcessPrompt,
+      base64StyleImage,
+      styleMimeType,
+      temperature,
+    } = req.body;
+
+    const model = ai.getGenerativeModel({ model: 'gemini-2.5-flash-image-preview' });
+
+    const parts = [
+      {
+        inlineData: {
+          data: base64SpriteSheet,
+          mimeType,
+        },
+      },
+    ];
+
+    if (base64StyleImage && styleMimeType) {
+      parts.push({
+        inlineData: {
+          data: base64StyleImage,
+          mimeType: styleMimeType,
+        },
+      });
+    }
+
+    parts.push({ text: postProcessPrompt });
+
+    const result = await model.generateContent({
+      contents: [
+        {
+          role: 'user',
+          parts,
+        },
+      ],
+      config: {
+        responseMimeType: 'application/json',
+        temperature,
+      },
+    });
+
+    res.json(result.response);
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: 'Failed to post-process animation' });
+  }
+});
+
+/**
+ * @route POST /api/detect-objects
+ * @description Detects objects in an animation.
+ * @param {object} req - The request object.
+ * @param {object} req.body - The request body.
+ * @param {string} req.body.base64SpriteSheet - The base64-encoded sprite sheet.
+ * @param {string} req.body.mimeType - The mime type of the sprite sheet.
+ * @param {string} req.body.detectionPrompt - The prompt for object detection.
+ * @param {object} res - The response object.
+ */
+app.post('/api/detect-objects', apiLimiter, async (req, res) => {
+  try {
+    const { base64SpriteSheet, mimeType, detectionPrompt } = req.body;
+
+    const model = ai.getGenerativeModel({ model: 'gemini-2.5-flash' });
+
+    const result = await model.generateContent({
+      contents: [
+        {
+          role: 'user',
+          parts: [
+            {
+              inlineData: {
+                data: base64SpriteSheet,
+                mimeType,
+              },
+            },
+            { text: detectionPrompt },
+          ],
+        },
+      ],
+      config: {
+        responseMimeType: 'application/json',
+      },
+    });
+
+    res.json(result.response);
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: 'Failed to detect objects' });
   }
 });
 
@@ -134,4 +229,8 @@ app.get('/api/share/:id', (req, res) => {
   } else {
     res.status(404).json({ error: 'Animation not found' });
   }
+});
+
+app.listen(port, () => {
+  console.log(`Server listening at http://localhost:${port}`);
 });

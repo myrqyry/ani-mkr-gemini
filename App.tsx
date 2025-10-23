@@ -136,7 +136,7 @@ const App: React.FC = () => {
     if (location.state?.prompt) {
       dispatch({ type: 'SET_STORY_PROMPT', payload: location.state.prompt });
     }
-  }, [location.state?.prompt]);
+  }, [location.state]);
 
   useEffect(() => {
     const checkForMultipleCameras = async () => {
