@@ -17,6 +17,9 @@ const ShareButton: React.FC<ShareButtonProps> = ({ isSharing, onClick, animation
         },
         body: JSON.stringify({ animationData: animationAssets }),
       });
+      if (!response.ok) {
+        throw new Error(`Server responded with status: ${response.status}`);
+      }
       const { id } = await response.json();
       const animationUrl = `${window.location.origin}/share/${id}`;
       onClick(animationUrl);

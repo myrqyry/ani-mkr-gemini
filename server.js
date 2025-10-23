@@ -16,16 +16,18 @@ app.use(express.json({ limit: '50mb' }));
 
 const ai = new GoogleGenerativeAI({ apiKey: process.env.GEMINI_API_KEY });
 
-const readDB = () => {
-  if (fs.existsSync(DB_FILE)) {
-    const data = fs.readFileSync(DB_FILE);
+const readDB = async () => {
+  try {
+    const data = await fs.promises.readFile(DB_FILE, 'utf-8');
     return JSON.parse(data);
+  } catch (e) {
+    // If the file doesn't exist or there's a parsing error, return an empty object.
+    return {};
   }
-  return {};
 };
 
-const writeDB = (data) => {
-  fs.writeFileSync(DB_FILE, JSON.stringify(data, null, 2));
+const writeDB = async (data) => {
+  await fs.promises.writeFile(DB_FILE, JSON.stringify(data, null, 2));
 };
 
 const apiLimiter = rateLimit({
@@ -211,18 +213,18 @@ app.post('/api/detect-objects', apiLimiter, async (req, res) => {
   }
 });
 
-app.post('/api/share', (req, res) => {
+app.post('/api/share', async (req, res) => {
   const { animationData } = req.body;
   const id = uuidv4();
-  const animations = readDB();
+  const animations = await readDB();
   animations[id] = animationData;
-  writeDB(animations);
+  await writeDB(animations);
   res.json({ id });
 });
 
-app.get('/api/share/:id', (req, res) => {
+app.get('/api/share/:id', async (req, res) => {
   const { id } = req.params;
-  const animations = readDB();
+  const animations = await readDB();
   const animationData = animations[id];
   if (animationData) {
     res.json(animationData);
