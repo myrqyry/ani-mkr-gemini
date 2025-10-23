@@ -113,7 +113,7 @@ app.post('/api/upload-file', apiLimiter, async (req, res) => {
  * @param {string} [req.body.base64StyleImage] - The base64-encoded style image.
  * @param {string} [req.body.styleMimeType] - The mime type of the style image.
  * @param {number} [req.body.temperature] - The temperature for the model.
- * @param {object} res - The response.
+ * @param {object} res - The response object.
  */
 app.post('/api/post-process', apiLimiter, async (req, res) => {
   try {
