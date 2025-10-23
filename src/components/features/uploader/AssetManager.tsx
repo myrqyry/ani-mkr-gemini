@@ -1,5 +1,5 @@
 import React, { useState, useCallback } from 'react';
-import { uploadFile } from 'src/services/geminiService';
+import { uploadFile } from 'src/services/gemini';
 
 interface Asset {
   uri: string;

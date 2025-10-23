@@ -1,11 +1,11 @@
 import { describe, it, expect, vi } from 'vitest';
 import { renderHook, act } from '@testing-library/react';
 import { usePostProcessing } from './usePostProcessing';
-import * as geminiService from '../services/geminiService';
+import * as geminiService from '../services/gemini';
 import * as imageUtils from '../utils/image';
 import { AppStatus } from '../types/types';
 
-vi.mock('../services/geminiService');
+vi.mock('../services/gemini');
 vi.mock('../utils/image');
 
 describe('usePostProcessing', () => {

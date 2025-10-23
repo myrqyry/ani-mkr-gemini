@@ -1,6 +1,6 @@
 import React, { useRef, useImperativeHandle, forwardRef, useState } from 'react';
 import { AppStatus, ImageState } from '../../../types/types';
-import { analyzeAnimation } from '../../../services/geminiService';
+import { analyzeAnimation } from '../../../services/gemini';
 import { XCircleIcon } from '../../icons';
 import {
   validateImageFile,

@@ -6,7 +6,7 @@
 
 import React, { useState, useCallback, useRef, useEffect, useReducer } from 'react';
 import { AppState, ImageState, AppStatus } from 'src/types/types';
-import { AnimationAssets, BoundingBox } from 'src/services/geminiService';
+import { AnimationAssets, BoundingBox } from 'src/services/gemini';
 import { promptSuggestions } from 'prompts';
 import CameraView, { CameraViewHandles } from 'src/components/CameraView';
 import AnimationPlayer from 'src/components/AnimationPlayer';
