@@ -8,6 +8,7 @@ import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { AnimationAssets, BoundingBox } from '../services/geminiService';
 import { Frame } from '../types';
 import Loader from './Loader';
+import ShareButton from './ShareButton';
 import { ExportIcon, InfoIcon, XCircleIcon, SettingsIcon, LoaderIcon, WandIcon } from './icons';
 
 // Add declaration for the gifshot library loaded from CDN
@@ -615,12 +616,15 @@ const AnimationPlayer: React.FC<AnimationPlayerProps> = ({ assets, frameCount, o
   }, [viewMode, spriteSheetImage, displayFrames, getImageDisplayDimensions, detectedObjects]);
 
 
-  const handleShare = () => {
-    if (viewMode === 'spritesheet') {
-        setViewMode('animation');
-        setPendingAction('share');
-    } else {
-        performShare();
+  const handleShare = async (animationUrl: string) => {
+    try {
+      await navigator.share({
+        title: 'Check out my animation!',
+        text: 'I created this cool animation with AniMkr Gemini.',
+        url: animationUrl,
+      });
+    } catch (error) {
+      console.error('Error sharing animation:', error);
     }
   };
 
@@ -808,9 +812,11 @@ const AnimationPlayer: React.FC<AnimationPlayerProps> = ({ assets, frameCount, o
           Export
         </button>
         {isShareAvailable && (
-            <button onClick={handleShare} disabled={isSharing} className="bg-[var(--color-info)] text-white font-bold py-2 px-4 rounded-lg hover:bg-[var(--color-info-hover)] transition-colors duration-200 flex items-center justify-center disabled:opacity-50 disabled:cursor-not-allowed focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-black focus-visible:ring-[var(--color-accent)]">
-                {isSharing ? 'Sharing...' : 'Share'}
-            </button>
+            <ShareButton
+              isSharing={isSharing}
+              onClick={handleShare}
+              animationAssets={assets}
+            />
         )}
     </div>
     </div>

@@ -5,6 +5,7 @@
 
 
 import React, { useState, useCallback, useRef, useEffect, useReducer } from 'react';
+import { useLocation } from 'react-router-dom';
 import { AppState, ImageState, AppStatus } from 'src/types/types';
 import { AnimationAssets, BoundingBox } from 'src/services/geminiService';
 import { promptSuggestions } from 'prompts';
@@ -57,6 +58,7 @@ interface TypingAnimationState {
  * @returns {React.ReactElement} The rendered component.
  */
 const App: React.FC = () => {
+  const location = useLocation();
   const {
     currentTheme,
     customThemes,
@@ -129,6 +131,12 @@ const App: React.FC = () => {
     (payload) => dispatch({ type: 'SET_ANIMATION_ASSETS', payload }),
   );
 
+
+  useEffect(() => {
+    if (location.state?.prompt) {
+      dispatch({ type: 'SET_STORY_PROMPT', payload: location.state.prompt });
+    }
+  }, [location.state]);
 
   useEffect(() => {
     const checkForMultipleCameras = async () => {

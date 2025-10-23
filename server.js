@@ -3,15 +3,30 @@ import express from 'express';
 import dotenv from 'dotenv';
 import { GoogleGenerativeAI } from '@google/generative-ai';
 import rateLimit from 'express-rate-limit';
+import fs from 'fs';
+import { v4 as uuidv4 } from 'uuid';
 
 dotenv.config();
 
 const app = express();
 const port = 3001;
+const DB_FILE = './animations.json';
 
 app.use(express.json({ limit: '50mb' }));
 
 const ai = new GoogleGenerativeAI({ apiKey: process.env.GEMINI_API_KEY });
+
+const readDB = () => {
+  if (fs.existsSync(DB_FILE)) {
+    const data = fs.readFileSync(DB_FILE);
+    return JSON.parse(data);
+  }
+  return {};
+};
+
+const writeDB = (data) => {
+  fs.writeFileSync(DB_FILE, JSON.stringify(data, null, 2));
+};
 
 const apiLimiter = rateLimit({
   windowMs: parseInt(process.env.RATE_LIMIT_WINDOW_MS || '60000', 10), // 1 minute
@@ -88,5 +103,25 @@ app.post('/api/upload-file', apiLimiter, async (req, res) => {
   } catch (error) {
     console.error(error);
     res.status(500).json({ error: 'Failed to upload file' });
+  }
+});
+
+app.post('/api/share', (req, res) => {
+  const { animationData } = req.body;
+  const id = uuidv4();
+  const animations = readDB();
+  animations[id] = animationData;
+  writeDB(animations);
+  res.json({ id });
+});
+
+app.get('/api/share/:id', (req, res) => {
+  const { id } = req.params;
+  const animations = readDB();
+  const animationData = animations[id];
+  if (animationData) {
+    res.json(animationData);
+  } else {
+    res.status(404).json({ error: 'Animation not found' });
   }
 });
