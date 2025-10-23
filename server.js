@@ -17,11 +17,21 @@ app.use(express.json({ limit: '50mb' }));
 const ai = new GoogleGenerativeAI({ apiKey: process.env.GEMINI_API_KEY });
 
 const readDB = () => {
-  if (fs.existsSync(DB_FILE)) {
-    const data = fs.readFileSync(DB_FILE);
-    return JSON.parse(data);
+  if (!fs.existsSync(DB_FILE)) {
+    return {};
   }
-  return {};
+
+  try {
+    const data = fs.readFileSync(DB_FILE, 'utf-8');
+    // Handle empty file case
+    if (data.trim() === '') {
+        return {};
+    }
+    return JSON.parse(data);
+  } catch (error) {
+    console.error('Error reading or parsing DB file:', error);
+    return {}; // Return empty object on error to prevent crash
+  }
 };
 
 const writeDB = (data) => {
