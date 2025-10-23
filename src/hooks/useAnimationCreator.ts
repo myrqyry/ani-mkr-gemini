@@ -1,6 +1,6 @@
 import { useCallback, useRef, useEffect } from 'react';
 import { AppStatus, ImageState, AnimationAssets } from '../types/types';
-import { generateAnimationAssets } from '../services/geminiService';
+import { generateAnimationAssets } from '../services/gemini';
 import { buildCreativeInstruction, promptSuggestions } from '../../prompts';
 import { resizeImage } from '../utils/image';
 import { MAIN_IMAGE_MAX_SIZE } from '../constants/app';

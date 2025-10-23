@@ -2,11 +2,11 @@ import React from 'react';
 import { describe, it, expect, vi } from 'vitest';
 import { renderHook, act } from '@testing-library/react';
 import { useAnimationCreator } from './useAnimationCreator';
-import * as geminiService from '../services/geminiService';
+import * as geminiService from '../services/gemini';
 import * as imageUtils from '../utils/image';
 import { AppStatus } from '../types/types';
 
-vi.mock('../services/geminiService');
+vi.mock('../services/gemini');
 vi.mock('../utils/image');
 
 describe('useAnimationCreator', () => {

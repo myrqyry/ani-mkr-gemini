@@ -1,6 +1,6 @@
 import { useCallback } from 'react';
 import { AppStatus, AnimationAssets, BoundingBox } from '../types/types';
-import { detectObjectsInAnimation } from '../services/geminiService';
+import { detectObjectsInAnimation } from '../services/gemini';
 import { buildObjectDetectionPrompt } from '../../prompts';
 
 /**

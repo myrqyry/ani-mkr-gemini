@@ -1,6 +1,6 @@
 import { useCallback } from 'react';
 import { AppStatus, ImageState, AnimationAssets } from '../types/types';
-import { postProcessAnimation } from '../services/geminiService';
+import { postProcessAnimation } from '../services/gemini';
 import { buildPostProcessPrompt } from '../../prompts';
 import { resizeImage } from '../utils/image';
 import { STYLE_IMAGE_MAX_SIZE } from '../constants/app';

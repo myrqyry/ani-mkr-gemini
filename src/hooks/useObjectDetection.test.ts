@@ -1,10 +1,10 @@
 import { describe, it, expect, vi } from 'vitest';
 import { renderHook, act } from '@testing-library/react';
 import { useObjectDetection } from './useObjectDetection';
-import * as geminiService from '../services/geminiService';
+import * as geminiService from '../services/gemini';
 import { AppStatus } from '../types/types';
 
-vi.mock('../services/geminiService');
+vi.mock('../services/gemini');
 
 describe('useObjectDetection', () => {
   it('should detect objects in an animation', async () => {
