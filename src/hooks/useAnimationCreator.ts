@@ -39,8 +39,9 @@ export const useAnimationCreator = (
   }, []);
 
   const handleCreateAnimation = useCallback(async (isRegeneration: boolean = false) => {
-    // Cancel any ongoing operation
-    abortControllerRef.current?.abort();
+    try {
+      // Cancel any ongoing operation
+      abortControllerRef.current?.abort();
     abortControllerRef.current = new AbortController();
 
     const currentPrompt = storyPrompt.trim();
@@ -121,7 +122,12 @@ export const useAnimationCreator = (
         setAppState(AppStatus.Capturing);
       }
     }
-  }, [storyPrompt, imageState.original, selectedAsset, frameCount, setAppState, setLoadingMessage, setError, setAnimationAssets, setStoryPrompt]);
+  } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
+    setError(errorMessage);
+    console.error('Animation creation failed:', error);
+  }
+}, [storyPrompt, imageState.original, selectedAsset, frameCount, setAppState, setLoadingMessage, setError, setAnimationAssets, setStoryPrompt]);
 
   return { handleCreateAnimation };
 };

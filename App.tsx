@@ -4,7 +4,7 @@
 */
 
 
-import React, { useState, useCallback, useRef, useEffect, useReducer } from 'react';
+import React, { useState, useCallback, useRef, useEffect, useReducer, useMemo } from 'react';
 import { AppState, ImageState, AppStatus } from 'src/types/types';
 import { AnimationAssets, BoundingBox } from 'src/services/gemini';
 import { promptSuggestions } from 'prompts';
@@ -69,6 +69,11 @@ const App: React.FC = () => {
     handleThemeImport,
   } = useThemeManager();
   const [state, dispatch] = useReducer(appReducer, initialState);
+
+  const memoizedDispatch = useCallback((action) => {
+    dispatch(action);
+  }, []);
+
   const {
     appStatus,
     imageState,
@@ -87,6 +92,11 @@ const App: React.FC = () => {
     isExportModalOpen,
   } = state;
 
+  const memoizedState = useMemo(() => ({
+    appStatus,
+    imageState,
+  }), [appStatus, imageState.original]);
+
   const cameraViewRef = useRef<CameraViewHandles>(null);
   const storyPromptTextareaRef = useRef<HTMLTextAreaElement>(null);
   const fileUploadManagerRef = useRef<FileUploadManagerHandles>(null);
@@ -97,11 +107,11 @@ const App: React.FC = () => {
     imageState,
     storyPrompt,
     frameCount,
-    (payload) => dispatch({ type: 'SET_APP_STATUS', payload }),
-    (payload) => dispatch({ type: 'SET_LOADING_MESSAGE', payload }),
-    (payload) => dispatch({ type: 'SET_ERROR', payload }),
-    (payload) => dispatch({ type: 'SET_ANIMATION_ASSETS', payload }),
-    (payload) => dispatch({ type: 'SET_STORY_PROMPT', payload }),
+    (payload) => memoizedDispatch({ type: 'SET_APP_STATUS', payload }),
+    (payload) => memoizedDispatch({ type: 'SET_LOADING_MESSAGE', payload }),
+    (payload) => memoizedDispatch({ type: 'SET_ERROR', payload }),
+    (payload) => memoizedDispatch({ type: 'SET_ANIMATION_ASSETS', payload }),
+    (payload) => memoizedDispatch({ type: 'SET_STORY_PROMPT', payload }),
     state.selectedAsset,
   );
 
@@ -111,10 +121,10 @@ const App: React.FC = () => {
 
   const { handleDetectObjects } = useObjectDetection(
     animationAssets,
-    (payload) => dispatch({ type: 'SET_APP_STATUS', payload }),
-    (payload) => dispatch({ type: 'SET_LOADING_MESSAGE', payload }),
-    (payload) => dispatch({ type: 'SET_ERROR', payload }),
-    (payload) => dispatch({ type: 'SET_DETECTED_OBJECTS', payload }),
+    (payload) => memoizedDispatch({ type: 'SET_APP_STATUS', payload }),
+    (payload) => memoizedDispatch({ type: 'SET_LOADING_MESSAGE', payload }),
+    (payload) => memoizedDispatch({ type: 'SET_ERROR', payload }),
+    (payload) => memoizedDispatch({ type: 'SET_DETECTED_OBJECTS', payload }),
   );
 
   const { handlePostProcess } = usePostProcessing(
@@ -123,10 +133,10 @@ const App: React.FC = () => {
     frameCount,
     styleIntensity,
     postProcessStrength,
-    (payload) => dispatch({ type: 'SET_APP_STATUS', payload }),
-    (payload) => dispatch({ type: 'SET_LOADING_MESSAGE', payload }),
-    (payload) => dispatch({ type: 'SET_ERROR', payload }),
-    (payload) => dispatch({ type: 'SET_ANIMATION_ASSETS', payload }),
+    (payload) => memoizedDispatch({ type: 'SET_APP_STATUS', payload }),
+    (payload) => memoizedDispatch({ type: 'SET_LOADING_MESSAGE', payload }),
+    (payload) => memoizedDispatch({ type: 'SET_ERROR', payload }),
+    (payload) => memoizedDispatch({ type: 'SET_ANIMATION_ASSETS', payload }),
   );
 
 
@@ -136,7 +146,7 @@ const App: React.FC = () => {
         try {
           const devices = await navigator.mediaDevices.enumerateDevices();
           const videoInputCount = devices.filter(d => d.kind === 'videoinput').length;
-          dispatch({ type: 'SET_HAS_MULTIPLE_CAMERAS', payload: videoInputCount > 1 });
+          memoizedDispatch({ type: 'SET_HAS_MULTIPLE_CAMERAS', payload: videoInputCount > 1 });
         } catch (err) {
           console.error("Failed to enumerate media devices:", err);
         }
@@ -146,22 +156,13 @@ const App: React.FC = () => {
   }, []);
   
   useEffect(() => {
-    // This cleanup function is for the *previous* effect. It runs before the new effect logic.
-    // It's crucial to access the *current* value of the ref to clear any running timeout.
-    const cleanup = () => {
-      if (typingAnimationRef.current?.timeoutId) {
-        clearTimeout(typingAnimationRef.current.timeoutId);
-      }
-    };
+    let animationRef: { timeoutId: NodeJS.Timeout | null; cancelled: boolean } | null = null;
 
-    // Condition to STOP the animation and clear the placeholder.
     if (storyPrompt.trim() || isPromptFocused) {
-      cleanup(); // Ensure any active animation is stopped immediately.
-      dispatch({ type: 'SET_TYPED_PLACEHOLDER', payload: '' });
-      return; // Exit the effect.
+      memoizedDispatch({ type: 'SET_TYPED_PLACEHOLDER', payload: '' });
+      return;
     }
 
-    // Condition to START the animation.
     const animationId = Date.now();
     typingAnimationRef.current = {
       id: animationId,
@@ -172,10 +173,14 @@ const App: React.FC = () => {
       speed: TYPING_ANIMATION_SPEED,
     };
 
+    animationRef = { timeoutId: null, cancelled: false };
+    const { current: animation } = { current: animationRef };
+
     const tick = () => {
+      if (animation.cancelled) return;
+
       const state = typingAnimationRef.current;
-      // If the state was cleared (e.g., by a fast dependency change), stop ticking.
-      if (!state || state.id !== animationId) return;
+      if (!state) return;
 
       let { fullText, isDeleting, text } = state;
 
@@ -185,7 +190,7 @@ const App: React.FC = () => {
         text = fullText.substring(0, text.length + 1);
       }
 
-      dispatch({ type: 'SET_TYPED_PLACEHOLDER', payload: text });
+      memoizedDispatch({ type: 'SET_TYPED_PLACEHOLDER', payload: text });
 
       let newSpeed = isDeleting ? TYPING_ANIMATION_DELETING_SPEED : TYPING_ANIMATION_SPEED;
 
@@ -198,15 +203,20 @@ const App: React.FC = () => {
       }
 
       state.text = text;
-      state.timeoutId = setTimeout(tick, newSpeed);
+      animation.timeoutId = setTimeout(tick, newSpeed);
     };
 
-    // Start the first tick.
-    typingAnimationRef.current.timeoutId = setTimeout(tick, TYPING_ANIMATION_SPEED);
+    animation.timeoutId = setTimeout(tick, TYPING_ANIMATION_SPEED);
 
-    // Return the cleanup function to be run when the component unmounts or dependencies change.
-    return cleanup;
-  }, [storyPrompt, isPromptFocused]);
+    return () => {
+      if (animationRef) {
+        animationRef.cancelled = true;
+        if (animationRef.timeoutId) {
+          clearTimeout(animationRef.timeoutId);
+        }
+      }
+    };
+  }, [storyPrompt, isPromptFocused, memoizedDispatch]);
   
   useEffect(() => {
     if (imageState.original && shouldAnimateAfterCapture.current) {
@@ -230,29 +240,29 @@ const App: React.FC = () => {
   }, [storyPrompt, isPromptFocused]);
 
   const handleCapture = useCallback((imageDataUrl: string) => {
-    dispatch({ type: 'SET_IMAGE_STATE', payload: { original: imageDataUrl } });
-    dispatch({ type: 'SET_IS_CAMERA_OPEN', payload: false });
-  }, []);
+    memoizedDispatch({ type: 'SET_IMAGE_STATE', payload: { original: imageDataUrl } });
+    memoizedDispatch({ type: 'SET_IS_CAMERA_OPEN', payload: false });
+  }, [memoizedDispatch]);
 
   const handleFlipCamera = () => {
     cameraViewRef.current?.flipCamera();
   };
 
   const handleCameraError = useCallback((message: string) => {
-    dispatch({ type: 'SET_ERROR', payload: message });
-    dispatch({ type: 'SET_APP_STATUS', payload: AppStatus.Error });
-  }, []);
+    memoizedDispatch({ type: 'SET_ERROR', payload: message });
+    memoizedDispatch({ type: 'SET_APP_STATUS', payload: AppStatus.Error });
+  }, [memoizedDispatch]);
 
   const handleClearImage = () => {
-    dispatch({ type: 'SET_IMAGE_STATE', payload: { original: null } });
-    dispatch({ type: 'SET_IS_CAMERA_OPEN', payload: false });
+    memoizedDispatch({ type: 'SET_IMAGE_STATE', payload: { original: null } });
+    memoizedDispatch({ type: 'SET_IS_CAMERA_OPEN', payload: false });
   };
   
   const handleBack = () => {
-    dispatch({ type: 'SET_APP_STATUS', payload: AppStatus.Capturing });
-    dispatch({ type: 'SET_ANIMATION_ASSETS', payload: null });
-    dispatch({ type: 'SET_ERROR', payload: null });
-    dispatch({ type: 'SET_DETECTED_OBJECTS', payload: null });
+    memoizedDispatch({ type: 'SET_APP_STATUS', payload: AppStatus.Capturing });
+    memoizedDispatch({ type: 'SET_ANIMATION_ASSETS', payload: null });
+    memoizedDispatch({ type: 'SET_ERROR', payload: null });
+    memoizedDispatch({ type: 'SET_DETECTED_OBJECTS', payload: null });
   };
   
   const handleSuggestionClick = (prompt: string) => {
@@ -264,9 +274,9 @@ const App: React.FC = () => {
       } else {
         prompts.push(prompt);
       }
-      dispatch({ type: 'SET_STORY_PROMPT', payload: prompts.join(', ') });
+      memoizedDispatch({ type: 'SET_STORY_PROMPT', payload: prompts.join(', ') });
     } else {
-      dispatch({
+      memoizedDispatch({
         type: 'SET_STORY_PROMPT',
         payload: storyPrompt === prompt ? '' : prompt,
       });
@@ -320,7 +330,7 @@ const App: React.FC = () => {
                 {FRAME_COUNTS.map(count => (
                   <button
                     key={count}
-                    onClick={() => dispatch({ type: 'SET_FRAME_COUNT', payload: count })}
+                    onClick={() => memoizedDispatch({ type: 'SET_FRAME_COUNT', payload: count })}
                     className={`px-4 py-1 rounded-md text-sm font-medium transition-all focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--color-background)] focus-visible:ring-[var(--color-accent)] ${
                       frameCount === count
                         ? 'bg-[var(--color-accent)] text-white scale-105'
@@ -348,11 +358,11 @@ const App: React.FC = () => {
                 rows={3}
                 className="w-full bg-[var(--color-overlay)] text-[var(--color-text-base)] border border-[var(--color-surface-alt)] rounded-lg px-4 py-3 focus:ring-[var(--color-accent)] focus:border-[var(--color-accent)] transition-all duration-300 text-lg resize-none overflow-y-auto"
                 value={storyPrompt}
-                onChange={e => dispatch({ type: 'SET_STORY_PROMPT', payload: e.target.value })}
-                onFocus={() => dispatch({ type: 'SET_IS_PROMPT_FOCUSED', payload: true })}
+                onChange={e => memoizedDispatch({ type: 'SET_STORY_PROMPT', payload: e.target.value })}
+                onFocus={() => memoizedDispatch({ type: 'SET_IS_PROMPT_FOCUSED', payload: true })}
                 onBlur={() => {
                   // We add a small delay to allow click events on other elements to fire before the blur causes a layout shift.
-                  dispatch({ type: 'SET_IS_PROMPT_FOCUSED', payload: false });
+                  memoizedDispatch({ type: 'SET_IS_PROMPT_FOCUSED', payload: false });
                 }}
                 aria-label="Animation prompt"
               />
@@ -360,13 +370,13 @@ const App: React.FC = () => {
             <FileUploadManager
               ref={fileUploadManagerRef}
               imageState={imageState}
-              setImageState={(payload) => dispatch({ type: 'SET_IMAGE_STATE', payload })}
+              setImageState={(payload) => memoizedDispatch({ type: 'SET_IMAGE_STATE', payload })}
               styleIntensity={styleIntensity}
-              setStyleIntensity={(payload) => dispatch({ type: 'SET_STYLE_INTENSITY', payload })}
-              setStoryPrompt={(payload) => dispatch({ type: 'SET_STORY_PROMPT', payload })}
-              setAppState={(payload) => dispatch({ type: 'SET_APP_STATUS', payload })}
-              setLoadingMessage={(payload) => dispatch({ type: 'SET_LOADING_MESSAGE', payload })}
-              setError={(payload) => dispatch({ type: 'SET_ERROR', payload })}
+              setStyleIntensity={(payload) => memoizedDispatch({ type: 'SET_STYLE_INTENSITY', payload })}
+              setStoryPrompt={(payload) => memoizedDispatch({ type: 'SET_STORY_PROMPT', payload })}
+              setAppState={(payload) => memoizedDispatch({ type: 'SET_APP_STATUS', payload })}
+              setLoadingMessage={(payload) => memoizedDispatch({ type: 'SET_LOADING_MESSAGE', payload })}
+              setError={(payload) => memoizedDispatch({ type: 'SET_ERROR', payload })}
             />
             <AssetManager onAssetSelect={handleAssetSelect} />
             {error && (() => {
@@ -386,7 +396,7 @@ const App: React.FC = () => {
                       </details>
                     </div>
                     <button
-                      onClick={() => dispatch({ type: 'SET_ERROR', payload: null })}
+                      onClick={() => memoizedDispatch({ type: 'SET_ERROR', payload: null })}
                       className="p-1 -mr-2 flex-shrink-0"
                       aria-label="Close error message"
                     >
@@ -397,7 +407,7 @@ const App: React.FC = () => {
                     <div className="mt-3 flex gap-2">
                       <button
                         onClick={() => {
-                          dispatch({ type: 'SET_ERROR', payload: null });
+                          memoizedDispatch({ type: 'SET_ERROR', payload: null });
                           handleCreateAnimation();
                         }}
                         className="bg-[var(--color-accent)] text-white font-semibold py-2 px-4 rounded hover:bg-[var(--color-accent-hover)] transition-colors transition-transform duration-300 text-sm transform hover:scale-105"
@@ -405,7 +415,7 @@ const App: React.FC = () => {
                         Try Again
                       </button>
                       <button
-                        onClick={() => dispatch({ type: 'SET_ERROR', payload: null })}
+                        onClick={() => memoizedDispatch({ type: 'SET_ERROR', payload: null })}
                         className="bg-[var(--color-surface)] text-[var(--color-text-base)] font-semibold py-2 px-4 rounded hover:bg-[var(--color-surface-hover)] transition-colors transition-transform duration-300 text-sm border border-[var(--color-border)] transform hover:scale-105"
                       >
                         Dismiss
@@ -438,7 +448,7 @@ const App: React.FC = () => {
                   <>
                       <CameraView ref={cameraViewRef} onCapture={handleCapture} onError={handleCameraError} />
                        <button
-                          onClick={() => dispatch({ type: 'SET_IS_CAMERA_OPEN', payload: false })}
+                          onClick={() => memoizedDispatch({ type: 'SET_IS_CAMERA_OPEN', payload: false })}
                           className="absolute top-4 left-4 bg-black/50 p-2 rounded-full text-white hover:bg-black/75 transition-colors transition-transform duration-200 transform hover:scale-110 focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-black focus-visible:ring-[var(--color-accent)]"
                           aria-label="Close camera"
                       >
@@ -461,7 +471,7 @@ const App: React.FC = () => {
                   </p>
                   <div className="flex flex-col items-center gap-4">
                     <button
-                      onClick={() => dispatch({ type: 'SET_IS_CAMERA_OPEN', payload: true })}
+                      onClick={() => memoizedDispatch({ type: 'SET_IS_CAMERA_OPEN', payload: true })}
                       className="w-52 bg-[var(--color-accent)] text-white font-bold py-3 px-6 rounded-lg hover:bg-[var(--color-accent-hover)] transition-colors transition-transform duration-300 flex items-center justify-center focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-black focus-visible:ring-[var(--color-accent)] transform hover:scale-105"
                       aria-label="Use camera to take a photo"
                     >
@@ -507,15 +517,15 @@ const App: React.FC = () => {
             frameCount={frameCount} 
             onRegenerate={() => handleCreateAnimation(true)} 
             onBack={handleBack}
-            onExport={() => dispatch({ type: 'SET_IS_EXPORT_MODAL_OPEN', payload: true })}
+            onExport={() => memoizedDispatch({ type: 'SET_IS_EXPORT_MODAL_OPEN', payload: true })}
             onPostProcess={handlePostProcess}
             onDetectObjects={handleDetectObjects}
             detectedObjects={detectedObjects}
             error={error}
-            clearError={() => dispatch({ type: 'SET_ERROR', payload: null })}
+            clearError={() => memoizedDispatch({ type: 'SET_ERROR', payload: null })}
             styleImage={imageState.style}
             postProcessStrength={postProcessStrength}
-            onPostProcessStrengthChange={(payload) => dispatch({ type: 'SET_POST_PROCESS_STRENGTH', payload })}
+            onPostProcessStrengthChange={(payload) => memoizedDispatch({ type: 'SET_POST_PROCESS_STRENGTH', payload })}
           />
         ) : null;
       case AppStatus.Error:
