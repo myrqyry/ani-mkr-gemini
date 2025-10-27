@@ -400,7 +400,7 @@ const App: React.FC = () => {
                           dispatch({ type: 'SET_ERROR', payload: null });
                           handleCreateAnimation();
                         }}
-                        className="bg-[var(--color-accent)] text-white font-semibold py-2 px-4 rounded hover:bg-[var(--color-accent-hover)] transition-all duration-300 text-sm transform hover:scale-105"
+                        className="bg-[var(--color-accent)] text-white font-semibold py-2 px-4 rounded hover:bg-[var(--color-accent-hover)] transition-colors transition-transform duration-300 text-sm transform hover:scale-105"
                       >
                         Try Again
                       </button>
