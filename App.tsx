@@ -439,7 +439,7 @@ const App: React.FC = () => {
                       <CameraView ref={cameraViewRef} onCapture={handleCapture} onError={handleCameraError} />
                        <button
                           onClick={() => dispatch({ type: 'SET_IS_CAMERA_OPEN', payload: false })}
-                          className="absolute top-4 left-4 bg-black/50 p-2 rounded-full text-white hover:bg-black/75 transition-all duration-200 transform hover:scale-110 focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-black focus-visible:ring-[var(--color-accent)]"
+                          className="absolute top-4 left-4 bg-black/50 p-2 rounded-full text-white hover:bg-black/75 transition-colors transition-transform duration-200 transform hover:scale-110 focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-black focus-visible:ring-[var(--color-accent)]"
                           aria-label="Close camera"
                       >
                         <XCircleIcon className="w-6 h-6" />
