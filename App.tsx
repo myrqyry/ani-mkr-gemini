@@ -306,7 +306,7 @@ const App: React.FC = () => {
                       <button
                         key={emoji}
                         onClick={() => handleSuggestionClick(prompt)}
-                        className={`text-3xl p-2 rounded-full transition-colors duration-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--color-background)] focus-visible:ring-[var(--color-accent)] ${isActive ? 'bg-[var(--color-accent)]' : 'hover:bg-[var(--color-overlay)]'}`}
+                        className={`text-3xl p-2 rounded-full transition-all duration-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--color-background)] focus-visible:ring-[var(--color-accent)] ${isActive ? 'bg-[var(--color-accent)] scale-110' : 'hover:bg-[var(--color-overlay)] hover:scale-110'}`}
                         title={prompt}
                         aria-label={`${ariaLabelAction} animation prompt: ${prompt}`}
                       >
@@ -321,10 +321,10 @@ const App: React.FC = () => {
                   <button
                     key={count}
                     onClick={() => dispatch({ type: 'SET_FRAME_COUNT', payload: count })}
-                    className={`px-4 py-1 rounded-md text-sm font-medium transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--color-background)] focus-visible:ring-[var(--color-accent)] ${
+                    className={`px-4 py-1 rounded-md text-sm font-medium transition-all focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--color-background)] focus-visible:ring-[var(--color-accent)] ${
                       frameCount === count
-                        ? 'bg-[var(--color-accent)] text-white'
-                        : 'bg-[var(--color-button)] text-[var(--color-text-muted)] hover:bg-[var(--color-button-hover)]'
+                        ? 'bg-[var(--color-accent)] text-white scale-105'
+                        : 'bg-[var(--color-button)] text-[var(--color-text-muted)] hover:bg-[var(--color-button-hover)] hover:scale-105'
                     }`}
                   >
                     {count} Frames
@@ -373,7 +373,7 @@ const App: React.FC = () => {
               const errorInfo = categorizeError(error);
               const errorTitle = getErrorTitle(errorInfo);
               return (
-                <div className="w-full bg-[var(--color-danger-surface)] border border-[var(--color-danger)] text-[var(--color-danger-text)] px-4 py-3 rounded-lg relative mb-4 animate-shake" role="alert">
+                <div className="w-full bg-[var(--color-danger-surface)] border border-[var(--color-danger)] text-[var(--color-danger-text)] px-4 py-3 rounded-lg relative mb-4 animate-fade-in" role="alert">
                   <div className="flex items-start justify-between">
                     <div className="flex-1 pr-4">
                       <strong className="font-bold block">{errorTitle}</strong>
@@ -400,13 +400,13 @@ const App: React.FC = () => {
                           dispatch({ type: 'SET_ERROR', payload: null });
                           handleCreateAnimation();
                         }}
-                        className="bg-[var(--color-accent)] text-white font-semibold py-2 px-4 rounded hover:bg-[var(--color-accent-hover)] transition-colors duration-300 text-sm"
+                        className="bg-[var(--color-accent)] text-white font-semibold py-2 px-4 rounded hover:bg-[var(--color-accent-hover)] transition-all duration-300 text-sm transform hover:scale-105"
                       >
                         Try Again
                       </button>
                       <button
                         onClick={() => dispatch({ type: 'SET_ERROR', payload: null })}
-                        className="bg-[var(--color-surface)] text-[var(--color-text-base)] font-semibold py-2 px-4 rounded hover:bg-[var(--color-surface-hover)] transition-colors duration-300 text-sm border border-[var(--color-border)]"
+                        className="bg-[var(--color-surface)] text-[var(--color-text-base)] font-semibold py-2 px-4 rounded hover:bg-[var(--color-surface-hover)] transition-all duration-300 text-sm border border-[var(--color-border)] transform hover:scale-105"
                       >
                         Dismiss
                       </button>
@@ -428,7 +428,7 @@ const App: React.FC = () => {
                       <img src={imageState.original} alt="Preview" className="w-full h-full object-cover" />
                       <button
                         onClick={handleClearImage}
-                        className="absolute top-4 left-4 bg-black/50 p-2 rounded-full text-white hover:bg-black/75 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-black focus-visible:ring-[var(--color-accent)]"
+                        className="absolute top-4 left-4 bg-black/50 p-2 rounded-full text-white hover:bg-black/75 transition-all duration-200 transform hover:scale-110 focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-black focus-visible:ring-[var(--color-accent)]"
                         aria-label="Remove image"
                       >
                         <XCircleIcon className="w-6 h-6" />
@@ -439,7 +439,7 @@ const App: React.FC = () => {
                       <CameraView ref={cameraViewRef} onCapture={handleCapture} onError={handleCameraError} />
                        <button
                           onClick={() => dispatch({ type: 'SET_IS_CAMERA_OPEN', payload: false })}
-                          className="absolute top-4 left-4 bg-black/50 p-2 rounded-full text-white hover:bg-black/75 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-black focus-visible:ring-[var(--color-accent)]"
+                          className="absolute top-4 left-4 bg-black/50 p-2 rounded-full text-white hover:bg-black/75 transition-all duration-200 transform hover:scale-110 focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-black focus-visible:ring-[var(--color-accent)]"
                           aria-label="Close camera"
                       >
                         <XCircleIcon className="w-6 h-6" />
@@ -447,7 +447,7 @@ const App: React.FC = () => {
                       {hasMultipleCameras && (
                           <button
                               onClick={handleFlipCamera}
-                              className="absolute top-4 right-4 bg-black/50 p-2 rounded-full text-white hover:bg-black/75 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-black focus-visible:ring-[var(--color-accent)]"
+                              className="absolute top-4 right-4 bg-black/50 p-2 rounded-full text-white hover:bg-black/75 transition-all duration-200 transform hover:scale-110 focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-black focus-visible:ring-[var(--color-accent)]"
                               aria-label="Flip camera"
                           >
                               <SwitchCameraIcon className="w-6 h-6" />
@@ -462,7 +462,7 @@ const App: React.FC = () => {
                   <div className="flex flex-col items-center gap-4">
                     <button
                       onClick={() => dispatch({ type: 'SET_IS_CAMERA_OPEN', payload: true })}
-                      className="w-52 bg-[var(--color-accent)] text-white font-bold py-3 px-6 rounded-lg hover:bg-[var(--color-accent-hover)] transition-colors duration-300 flex items-center justify-center focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-black focus-visible:ring-[var(--color-accent)]"
+                      className="w-52 bg-[var(--color-accent)] text-white font-bold py-3 px-6 rounded-lg hover:bg-[var(--color-accent-hover)] transition-all duration-300 flex items-center justify-center focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-black focus-visible:ring-[var(--color-accent)] transform hover:scale-105"
                       aria-label="Use camera to take a photo"
                     >
                       <CameraIcon className="w-6 h-6 mr-3" />
@@ -470,7 +470,7 @@ const App: React.FC = () => {
                     </button>
                     <button
                       onClick={() => fileUploadManagerRef.current?.handleUploadClick()}
-                      className="w-52 bg-[var(--color-button)] text-white font-bold py-3 px-6 rounded-lg hover:bg-[var(--color-button-hover)] transition-colors duration-300 flex items-center justify-center focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-black focus-visible:ring-[var(--color-accent)]"
+                      className="w-52 bg-[var(--color-button)] text-white font-bold py-3 px-6 rounded-lg hover:bg-[var(--color-button-hover)] transition-all duration-300 flex items-center justify-center focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-black focus-visible:ring-[var(--color-accent)] transform hover:scale-105"
                       aria-label="Upload an image from your device"
                     >
                       <UploadIcon className="w-6 h-6 mr-3" />
@@ -478,7 +478,7 @@ const App: React.FC = () => {
                     </button>
                     <button
                       onClick={() => fileUploadManagerRef.current?.handlePasteUrl('main')}
-                      className="w-52 bg-[var(--color-button)] text-white font-bold py-3 px-6 rounded-lg hover:bg-[var(--color-button-hover)] transition-colors duration-300 flex items-center justify-center focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-black focus-visible:ring-[var(--color-accent)]"
+                      className="w-52 bg-[var(--color-button)] text-white font-bold py-3 px-6 rounded-lg hover:bg-[var(--color-button-hover)] transition-all duration-300 flex items-center justify-center focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-black focus-visible:ring-[var(--color-accent)] transform hover:scale-105"
                       aria-label="Paste an image URL"
                     >
                       <LinkIcon className="w-6 h-6 mr-3" />
@@ -524,7 +524,7 @@ const App: React.FC = () => {
             <p className="text-[var(--color-text-base)] mb-6 font-medium text-lg">{error}</p>
             <button
               onClick={handleBack}
-              className="bg-[var(--color-accent)] text-white font-bold py-3 px-6 rounded-lg hover:bg-[var(--color-accent-hover)] transition-colors duration-300 focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-black focus-visible:ring-[var(--color-accent)]"
+              className="bg-[var(--color-accent)] text-white font-bold py-3 px-6 rounded-lg hover:bg-[var(--color-accent-hover)] transition-all duration-300 transform hover:scale-105 focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-black focus-visible:ring-[var(--color-accent)]"
             >
               Try Again
             </button>
@@ -534,9 +534,9 @@ const App: React.FC = () => {
   };
 
   return (
-    <div className="h-dvh bg-[var(--color-background)] text-[var(--color-text-base)] flex flex-col items-center p-4 overflow-y-auto">
+    <div className="h-dvh bg-[var(--color-background)] text-[var(--color-text-base)] flex flex-col items-center p-4 overflow-y-auto animate-fade-in">
       <ErrorBoundary>
-        <div className="w-full grow flex items-center [@media(max-height:750px)]:items-start justify-center">
+        <div className="w-full grow flex items-center [@media(max-height:750px)]:items-start justify-center animate-fade-in-up">
           {renderContent()}
         </div>
       </ErrorBoundary>
@@ -560,12 +560,14 @@ const App: React.FC = () => {
             />
         )}
       {isExportModalOpen && animationAssets && (
-        <ExportModal
-          frames={animationAssets.frames}
-          width={512}
-          height={512}
-          onClose={() => dispatch({ type: 'SET_IS_EXPORT_MODAL_OPEN', payload: false })}
-        />
+        <div className="animate-scale-in">
+          <ExportModal
+            frames={animationAssets.frames}
+            width={512}
+            height={512}
+            onClose={() => dispatch({ type: 'SET_IS_EXPORT_MODAL_OPEN', payload: false })}
+          />
+        </div>
       )}
     </div>
   );

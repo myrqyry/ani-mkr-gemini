@@ -95,8 +95,40 @@
     30%, 50%, 70% { transform: translate3d(-4px, 0, 0); }
     40%, 60% { transform: translate3d(4px, 0, 0); }
   }
+
+  @keyframes fade-in {
+    from { opacity: 0; }
+    to { opacity: 1; }
+  }
+
+  @keyframes fade-in-up {
+    from { opacity: 0; transform: translateY(20px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  @keyframes slide-in-down {
+    from { transform: translateY(-100%); }
+    to { transform: translateY(0); }
+  }
+
+  @keyframes scale-in {
+    from { transform: scale(0.95); opacity: 0; }
+    to { transform: scale(1); opacity: 1; }
+  }
 }
 
 @utility animate-shake {
   animation: shake 0.5s ease-in-out;
+}
+@utility animate-fade-in {
+  animation: fade-in 0.3s ease-out;
+}
+@utility animate-fade-in-up {
+  animation: fade-in-up 0.4s ease-out;
+}
+@utility animate-slide-in-down {
+  animation: slide-in-down 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+}
+@utility animate-scale-in {
+  animation: scale-in 0.2s ease-out;
 }
