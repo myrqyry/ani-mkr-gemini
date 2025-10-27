@@ -306,7 +306,7 @@ const App: React.FC = () => {
                       <button
                         key={emoji}
                         onClick={() => handleSuggestionClick(prompt)}
-                        className={`text-3xl p-2 rounded-full transition-all duration-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--color-background)] focus-visible:ring-[var(--color-accent)] ${isActive ? 'bg-[var(--color-accent)] scale-110' : 'hover:bg-[var(--color-overlay)] hover:scale-110'}`}
+                        className={`text-3xl p-2 rounded-full transform transition-colors transition-transform duration-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--color-background)] focus-visible:ring-[var(--color-accent)] ${isActive ? 'bg-[var(--color-accent)] scale-110' : 'hover:bg-[var(--color-overlay)] hover:scale-110'}`}
                         title={prompt}
                         aria-label={`${ariaLabelAction} animation prompt: ${prompt}`}
                       >
