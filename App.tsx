@@ -462,7 +462,7 @@ const App: React.FC = () => {
                   <div className="flex flex-col items-center gap-4">
                     <button
                       onClick={() => dispatch({ type: 'SET_IS_CAMERA_OPEN', payload: true })}
-                      className="w-52 bg-[var(--color-accent)] text-white font-bold py-3 px-6 rounded-lg hover:bg-[var(--color-accent-hover)] transition-all duration-300 flex items-center justify-center focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-black focus-visible:ring-[var(--color-accent)] transform hover:scale-105"
+                      className="w-52 bg-[var(--color-accent)] text-white font-bold py-3 px-6 rounded-lg hover:bg-[var(--color-accent-hover)] transition-colors transition-transform duration-300 flex items-center justify-center focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-black focus-visible:ring-[var(--color-accent)] transform hover:scale-105"
                       aria-label="Use camera to take a photo"
                     >
                       <CameraIcon className="w-6 h-6 mr-3" />
