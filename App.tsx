@@ -470,7 +470,7 @@ const App: React.FC = () => {
                     </button>
                     <button
                       onClick={() => fileUploadManagerRef.current?.handleUploadClick()}
-                      className="w-52 bg-[var(--color-button)] text-white font-bold py-3 px-6 rounded-lg hover:bg-[var(--color-button-hover)] transition-all duration-300 flex items-center justify-center focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-black focus-visible:ring-[var(--color-accent)] transform hover:scale-105"
+                      className="w-52 bg-[var(--color-button)] text-white font-bold py-3 px-6 rounded-lg hover:bg-[var(--color-button-hover)] transition-colors transition-transform duration-300 flex items-center justify-center focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-black focus-visible:ring-[var(--color-accent)] transform hover:scale-105"
                       aria-label="Upload an image from your device"
                     >
                       <UploadIcon className="w-6 h-6 mr-3" />
