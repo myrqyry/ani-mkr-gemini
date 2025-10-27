@@ -447,7 +447,7 @@ const App: React.FC = () => {
                       {hasMultipleCameras && (
                           <button
                               onClick={handleFlipCamera}
-                              className="absolute top-4 right-4 bg-black/50 p-2 rounded-full text-white hover:bg-black/75 transition-all duration-200 transform hover:scale-110 focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-black focus-visible:ring-[var(--color-accent)]"
+                              className="absolute top-4 right-4 bg-black/50 p-2 rounded-full text-white hover:bg-black/75 transition-colors transition-transform duration-200 transform hover:scale-110 focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-black focus-visible:ring-[var(--color-accent)]"
                               aria-label="Flip camera"
                           >
                               <SwitchCameraIcon className="w-6 h-6" />
