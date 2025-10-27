@@ -128,12 +128,18 @@ export const generateAnimationAssets = async (
 
     return { imageData, frames: [], frameDuration };
   } catch (error) {
-    console.error('Error during asset generation:', error);
-    throw new Error(
-      `Failed to process image. ${
-        error instanceof Error ? error.message : ''
-      }`,
-    );
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+    console.error('Error during asset generation:', { error: errorMessage, stack: error.stack });
+
+    // Create more specific error types
+    if (error.name === 'AbortError') {
+      throw new Error('Animation generation was cancelled');
+    }
+    if (error.message.includes('HTTP error')) {
+      throw new Error('Network error: Please check your connection and try again');
+    }
+
+    throw new Error(`Failed to process image: ${errorMessage}`);
   }
 };
 
@@ -149,26 +155,37 @@ export const detectObjectsInAnimation = async (
   mimeType: string,
   detectionPrompt: string,
 ): Promise<BoundingBox[]> => {
-  const response = await fetch('/api/detect-objects', {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({
-      base64SpriteSheet,
-      mimeType,
-      detectionPrompt,
-    }),
-  });
+  try {
+    const response = await fetch('/api/detect-objects', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        base64SpriteSheet,
+        mimeType,
+        detectionPrompt,
+      }),
+    });
 
-  if (!response.ok) {
-    throw new Error(`HTTP error! status: ${response.status}`);
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+
+    const result = await response.json();
+    const jsonText = result.candidates[0].content.parts[0].text;
+    const cleanedJsonText = jsonText.replace(/^```json\s*|```\s*$/g, '');
+    return JSON.parse(cleanedJsonText);
+  } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+    console.error('Error during object detection:', { error: errorMessage, stack: error.stack });
+
+    if (error.message.includes('HTTP error')) {
+      throw new Error('Network error: Please check your connection and try again');
+    }
+
+    throw new Error(`Failed to detect objects: ${errorMessage}`);
   }
-
-  const result = await response.json();
-  const jsonText = result.candidates[0].content.parts[0].text;
-  const cleanedJsonText = jsonText.replace(/^```json\s*|```\s*$/g, '');
-  return JSON.parse(cleanedJsonText);
 };
 
 /**
@@ -191,45 +208,56 @@ export const postProcessAnimation = async (
   styleMimeType?: string | null,
   temperature?: number,
 ): Promise<AnimationAssets | null> => {
-  const response = await fetch('/api/post-process', {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({
-      base64SpriteSheet,
-      mimeType,
-      postProcessPrompt,
-      base64StyleImage,
-      styleMimeType,
-      temperature,
-    }),
-  });
+  try {
+    const response = await fetch('/api/post-process', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        base64SpriteSheet,
+        mimeType,
+        postProcessPrompt,
+        base64StyleImage,
+        styleMimeType,
+        temperature,
+      }),
+    });
 
-  if (!response.ok) {
-    throw new Error(`HTTP error! status: ${response.status}`);
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+
+    const result = await response.json();
+    const imagePart = result.candidates[0].content.parts.find((p: any) => p.inlineData);
+    const imageData = { data: imagePart.inlineData.data, mimeType: imagePart.inlineData.mimeType };
+    let frameDuration = 120;
+    const textPart = result.candidates[0].content.parts.find((p: any) => p.text);
+    if (textPart?.text) {
+        try {
+            const jsonStringMatch = textPart.text.match(/{.*}/s);
+            if (jsonStringMatch) {
+                const parsed = JSON.parse(jsonStringMatch[0]);
+                if (parsed.frameDuration && typeof parsed.frameDuration === 'number') {
+                    frameDuration = parsed.frameDuration;
+                }
+            }
+        } catch (e) {
+            console.warn("Could not parse frame duration from model response. Using default.", e);
+        }
+    }
+
+    return { imageData, frames: [], frameDuration };
+  } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+    console.error('Error during post-processing:', { error: errorMessage, stack: error.stack });
+
+    if (error.message.includes('HTTP error')) {
+      throw new Error('Network error: Please check your connection and try again');
+    }
+
+    throw new Error(`Failed to post-process animation: ${errorMessage}`);
   }
-
-  const result = await response.json();
-  const imagePart = result.candidates[0].content.parts.find((p: any) => p.inlineData);
-  const imageData = { data: imagePart.inlineData.data, mimeType: imagePart.inlineData.mimeType };
-  let frameDuration = 120;
-  const textPart = result.candidates[0].content.parts.find((p: any) => p.text);
-  if (textPart?.text) {
-      try {
-          const jsonStringMatch = textPart.text.match(/{.*}/s);
-          if (jsonStringMatch) {
-              const parsed = JSON.parse(jsonStringMatch[0]);
-              if (parsed.frameDuration && typeof parsed.frameDuration === 'number') {
-                  frameDuration = parsed.frameDuration;
-              }
-          }
-      } catch (e) {
-          console.warn("Could not parse frame duration from model response. Using default.", e);
-      }
-  }
-
-  return { imageData, frames: [], frameDuration };
 };
 
 /**
@@ -251,20 +279,31 @@ export const uploadFile = async (
   file: string,
   mimeType: string,
 ): Promise<any> => {
-  const response = await fetch('/api/upload-file', {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({
-      file,
-      mimeType,
-    }),
-  });
+  try {
+    const response = await fetch('/api/upload-file', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        file,
+        mimeType,
+      }),
+    });
 
-  if (!response.ok) {
-    throw new Error(`HTTP error! status: ${response.status}`);
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+
+    return response.json();
+  } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+    console.error('Error during file upload:', { error: errorMessage, stack: error.stack });
+
+    if (error.message.includes('HTTP error')) {
+      throw new Error('Network error: Please check your connection and try again');
+    }
+
+    throw new Error(`Failed to upload file: ${errorMessage}`);
   }
-
-  return response.json();
 };
