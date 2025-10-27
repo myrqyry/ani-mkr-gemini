@@ -406,7 +406,7 @@ const App: React.FC = () => {
                       </button>
                       <button
                         onClick={() => dispatch({ type: 'SET_ERROR', payload: null })}
-                        className="bg-[var(--color-surface)] text-[var(--color-text-base)] font-semibold py-2 px-4 rounded hover:bg-[var(--color-surface-hover)] transition-all duration-300 text-sm border border-[var(--color-border)] transform hover:scale-105"
+                        className="bg-[var(--color-surface)] text-[var(--color-text-base)] font-semibold py-2 px-4 rounded hover:bg-[var(--color-surface-hover)] transition-colors transition-transform duration-300 text-sm border border-[var(--color-border)] transform hover:scale-105"
                       >
                         Dismiss
                       </button>
