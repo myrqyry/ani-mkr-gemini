@@ -25,6 +25,7 @@ import { useObjectDetection } from 'src/hooks/useObjectDetection';
 import { usePostProcessing } from 'src/hooks/usePostProcessing';
 import { appReducer, initialState } from 'src/reducers/appReducer';
 import { categorizeError, getErrorTitle } from 'src/utils/errorHandler';
+import { debounce } from 'lodash';
 import {
   FRAME_COUNTS,
   TYPING_ANIMATION_TEXT,
@@ -115,6 +116,21 @@ const App: React.FC = () => {
     state.selectedAsset,
   );
 
+  const animationCallbackRef = useRef(handleCreateAnimation);
+  useEffect(() => {
+    animationCallbackRef.current = handleCreateAnimation;
+  }, [handleCreateAnimation]);
+
+  const debouncedCreateAnimation = useMemo(
+    () => debounce(
+      () => {
+        animationCallbackRef.current(false);
+      },
+      500
+    ),
+    []
+  );
+
   const handleAssetSelect = (asset: any) => {
     dispatch({ type: 'SET_SELECTED_ASSET', payload: asset });
   };
@@ -156,7 +172,9 @@ const App: React.FC = () => {
   }, []);
   
   useEffect(() => {
-    let animationRef: { timeoutId: NodeJS.Timeout | null; cancelled: boolean } | null = null;
+    if (typingAnimationRef.current?.timeoutId) {
+      clearTimeout(typingAnimationRef.current.timeoutId);
+    }
 
     if (storyPrompt.trim() || isPromptFocused) {
       memoizedDispatch({ type: 'SET_TYPED_PLACEHOLDER', payload: '' });
@@ -173,14 +191,9 @@ const App: React.FC = () => {
       speed: TYPING_ANIMATION_SPEED,
     };
 
-    animationRef = { timeoutId: null, cancelled: false };
-    const { current: animation } = { current: animationRef };
-
     const tick = () => {
-      if (animation.cancelled) return;
-
       const state = typingAnimationRef.current;
-      if (!state) return;
+      if (!state || state.id !== animationId) return;
 
       let { fullText, isDeleting, text } = state;
 
@@ -203,17 +216,15 @@ const App: React.FC = () => {
       }
 
       state.text = text;
-      animation.timeoutId = setTimeout(tick, newSpeed);
+      typingAnimationRef.current.timeoutId = setTimeout(tick, newSpeed);
     };
 
-    animation.timeoutId = setTimeout(tick, TYPING_ANIMATION_SPEED);
+    typingAnimationRef.current.timeoutId = setTimeout(tick, TYPING_ANIMATION_SPEED);
 
     return () => {
-      if (animationRef) {
-        animationRef.cancelled = true;
-        if (animationRef.timeoutId) {
-          clearTimeout(animationRef.timeoutId);
-        }
+      if (typingAnimationRef.current?.timeoutId) {
+        clearTimeout(typingAnimationRef.current.timeoutId);
+        typingAnimationRef.current = null;
       }
     };
   }, [storyPrompt, isPromptFocused, memoizedDispatch]);
@@ -239,10 +250,17 @@ const App: React.FC = () => {
     }
   }, [storyPrompt, isPromptFocused]);
 
-  const handleCapture = useCallback((imageDataUrl: string) => {
+  const handleCapture = useCallback(async (imageDataUrl: string) => {
     memoizedDispatch({ type: 'SET_IMAGE_STATE', payload: { original: imageDataUrl } });
     memoizedDispatch({ type: 'SET_IS_CAMERA_OPEN', payload: false });
-  }, [memoizedDispatch]);
+
+    await new Promise(resolve => setTimeout(resolve, 0));
+
+    if (shouldAnimateAfterCapture.current) {
+      shouldAnimateAfterCapture.current = false;
+      handleCreateAnimation();
+    }
+  }, [memoizedDispatch, handleCreateAnimation]);
 
   const handleFlipCamera = () => {
     cameraViewRef.current?.flipCamera();
@@ -290,17 +308,19 @@ const App: React.FC = () => {
             cameraViewRef.current.capture();
         }
     } else {
-        handleCreateAnimation();
+        debouncedCreateAnimation();
     }
-  }, [isCameraOpen, handleCreateAnimation]);
+  }, [isCameraOpen, debouncedCreateAnimation]);
   
   const isAniMkrGeminiDisabled = !isCameraOpen && !imageState.original && (REQUIRE_IMAGE_FOR_ANIMATION || !storyPrompt.trim());
 
-  const renderContent = () => {
+  const CONTAINER_CLASSES = "flex flex-col items-center justify-center w-full max-w-md mx-auto";
+
+  const renderContent = useMemo(() => {
     switch (appStatus) {
       case AppStatus.Capturing:
         return (
-          <div className="flex flex-col items-center justify-center w-full max-w-md mx-auto">
+          <div className={CONTAINER_CLASSES}>
              <div className="w-full mt-3 mb-2 overflow-x-auto no-scrollbar" aria-label="Animation style suggestions">
                 <div className="w-max mx-auto flex items-center gap-x-3 sm:gap-x-4 px-4">
                   {promptSuggestions.map(({ emoji, prompt }) => {
@@ -541,13 +561,13 @@ const App: React.FC = () => {
           </div>
         );
     }
-  };
+  }, [appStatus, animationAssets, error, frameCount, handleBack, handleCreateAnimation, handleDetectObjects, handlePostProcess, imageState.style, loadingMessage, postProcessStrength, detectedObjects]);
 
   return (
     <div className="h-dvh bg-[var(--color-background)] text-[var(--color-text-base)] flex flex-col items-center p-4 overflow-y-auto animate-fade-in">
       <ErrorBoundary>
         <div className="w-full grow flex items-center [@media(max-height:750px)]:items-start justify-center animate-fade-in-up">
-          {renderContent()}
+          {renderContent}
         </div>
       </ErrorBoundary>
       <footer className="w-full shrink-0 p-4 text-center text-[var(--color-text-subtle)] text-xs flex justify-center items-center gap-x-6">

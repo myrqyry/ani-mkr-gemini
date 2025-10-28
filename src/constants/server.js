@@ -1,0 +1,7 @@
+export const SERVER_CONFIG = {
+  MAX_REQUEST_SIZE: '50mb',
+  MAX_REQUEST_SIZE_BYTES: 52428800,
+  DEFAULT_RATE_LIMIT_WINDOW_MS: 60000,
+  DEFAULT_RATE_LIMIT_MAX_REQUESTS: 10,
+  SUPPORTED_IMAGE_FORMATS: ['image/png', 'image/jpeg', 'image/gif', 'image/webp']
+};

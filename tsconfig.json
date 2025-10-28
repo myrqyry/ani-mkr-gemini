@@ -1,5 +1,6 @@
 {
   "compilerOptions": {
+    // Strict mode is already enabled
     "strict": true,
     "noImplicitAny": true,
     "strictNullChecks": true,
