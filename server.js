@@ -4,8 +4,13 @@ import dotenv from 'dotenv';
 import { GoogleGenerativeAI } from '@google/generative-ai';
 import rateLimit from 'express-rate-limit';
 import cors from 'cors';
+import DOMPurify from 'isomorphic-dompurify';
+import crypto from 'crypto';
+import { SERVER_CONFIG } from './src/constants/server.js';
+import { validateEnvironment } from './src/utils/validateEnv.js';
 
 dotenv.config();
+validateEnvironment();
 
 const app = express();
 const port = 3001;
@@ -17,10 +22,19 @@ app.use(cors({
   credentials: true
 }));
 
+app.use((req, res, next) => {
+  const start = Date.now();
+  res.on('finish', () => {
+    const duration = Date.now() - start;
+    console.log(`${req.method} ${req.path} - ${res.statusCode} - ${duration}ms`);
+  });
+  next();
+});
+
 app.use(express.json({
-  limit: '50mb',
+  limit: SERVER_CONFIG.MAX_REQUEST_SIZE,
   verify: (req, res, buf) => {
-    if (buf.length > 52428800) { // 50MB
+    if (buf.length > SERVER_CONFIG.MAX_REQUEST_SIZE_BYTES) {
       throw new Error('Request too large');
     }
   }
@@ -34,10 +48,22 @@ if (!apiKey) {
 const ai = new GoogleGenerativeAI({ apiKey });
 
 const apiLimiter = rateLimit({
-  windowMs: parseInt(process.env.RATE_LIMIT_WINDOW_MS || '60000', 10), // 1 minute
-  max: parseInt(process.env.RATE_LIMIT_MAX_REQUESTS || '10', 10), // Limit each IP to 10 requests per windowMs
+  windowMs: parseInt(process.env.RATE_LIMIT_WINDOW_MS || String(SERVER_CONFIG.DEFAULT_RATE_LIMIT_WINDOW_MS), 10),
+  max: parseInt(process.env.RATE_LIMIT_MAX_REQUESTS || String(SERVER_CONFIG.DEFAULT_RATE_LIMIT_MAX_REQUESTS), 10),
   message: process.env.RATE_LIMIT_MESSAGE || 'Too many requests from this IP, please try again after a minute',
 });
+
+const validateApiKey = (req, res, next) => {
+  const authHeader = req.headers.authorization;
+  const expectedKey = process.env.CLIENT_API_SECRET;
+
+  if (!authHeader || authHeader !== `Bearer ${expectedKey}`) {
+    return res.status(401).json({ error: 'Unauthorized' });
+  }
+  next();
+};
+
+app.use('/api/*', validateApiKey);
 
 /**
  * @route POST /api/generate-animation
@@ -56,15 +82,42 @@ const validateGenerateAnimationInput = (body) => {
     throw new Error('Invalid prompt: must be a string under 5000 characters');
   }
 
+  const sanitizedPrompt = DOMPurify.sanitize(prompt, {
+    ALLOWED_TAGS: [],
+    ALLOWED_ATTR: []
+  });
+
+  const maliciousPatterns = [/<script/i, /javascript:/i, /on\w+=/i];
+  if (maliciousPatterns.some(pattern => pattern.test(sanitizedPrompt))) {
+    throw new Error('Potentially malicious content detected');
+  }
+
   if (imageData && typeof imageData !== 'string') {
     throw new Error('Invalid imageData: must be a base64 string');
   }
 
-  if (mimeType && !['image/png', 'image/jpeg', 'image/gif', 'image/webp'].includes(mimeType)) {
+  if (mimeType && !SERVER_CONFIG.SUPPORTED_IMAGE_FORMATS.includes(mimeType)) {
     throw new Error('Invalid mimeType: unsupported image format');
   }
 
-  return { imageData, prompt, mimeType, fileUri };
+  return { imageData, prompt: sanitizedPrompt, mimeType, fileUri };
+};
+
+const handleApiError = (error, operation, res) => {
+  const sanitizedError = error instanceof Error ? error.message : 'Unknown error';
+  const errorId = crypto.randomUUID();
+
+  console.error(`${operation} error [${errorId}]:`, {
+    timestamp: new Date().toISOString(),
+    error: sanitizedError,
+    stack: process.env.NODE_ENV === 'development' ? error.stack : undefined
+  });
+
+  res.status(500).json({
+    error: `Failed to ${operation.toLowerCase()}`,
+    errorId,
+    ...(process.env.NODE_ENV === 'development' && { details: sanitizedError })
+  });
 };
 
 app.post('/api/generate-animation', apiLimiter, async (req, res) => {
@@ -100,16 +153,7 @@ app.post('/api/generate-animation', apiLimiter, async (req, res) => {
 
     res.end();
   } catch (error) {
-    const sanitizedError = error instanceof Error ? error.message : 'Unknown error';
-    console.error('Animation generation error:', {
-      timestamp: new Date().toISOString(),
-      error: sanitizedError,
-      stack: process.env.NODE_ENV === 'development' ? error.stack : undefined
-    });
-    res.status(500).json({
-      error: 'Failed to generate animation',
-      ...(process.env.NODE_ENV === 'development' && { details: sanitizedError })
-    });
+    handleApiError(error, 'generate animation', res);
   }
 });
 
@@ -132,7 +176,7 @@ const validateUploadFileInput = (body) => {
     throw new Error('Invalid file: must be a base64 string');
   }
 
-  if (!mimeType || !['image/png', 'image/jpeg', 'image/gif', 'image/webp'].includes(mimeType)) {
+  if (!mimeType || !SERVER_CONFIG.SUPPORTED_IMAGE_FORMATS.includes(mimeType)) {
     throw new Error('Invalid mimeType: unsupported image format');
   }
 
@@ -154,16 +198,7 @@ app.post('/api/upload-file', apiLimiter, async (req, res) => {
     const result = await ai.uploadFile(file, { mimeType });
     res.json(result);
   } catch (error) {
-    const sanitizedError = error instanceof Error ? error.message : 'Unknown error';
-    console.error('File upload error:', {
-      timestamp: new Date().toISOString(),
-      error: sanitizedError,
-      stack: process.env.NODE_ENV === 'development' ? error.stack : undefined
-    });
-    res.status(500).json({
-      error: 'Failed to upload file',
-      ...(process.env.NODE_ENV === 'development' && { details: sanitizedError })
-    });
+    handleApiError(error, 'upload file', res);
   }
 });
 
@@ -174,7 +209,7 @@ const validatePostProcessInput = (body) => {
     throw new Error('Invalid base64SpriteSheet: must be a base64 string');
   }
 
-  if (!mimeType || !['image/png', 'image/jpeg', 'image/gif', 'image/webp'].includes(mimeType)) {
+  if (!mimeType || !SERVER_CONFIG.SUPPORTED_IMAGE_FORMATS.includes(mimeType)) {
     throw new Error('Invalid mimeType: unsupported image format');
   }
 
@@ -186,7 +221,7 @@ const validatePostProcessInput = (body) => {
     throw new Error('Invalid base64StyleImage: must be a base64 string');
   }
 
-  if (styleMimeType && !['image/png', 'image/jpeg', 'image/gif', 'image/webp'].includes(styleMimeType)) {
+  if (styleMimeType && !SERVER_CONFIG.SUPPORTED_IMAGE_FORMATS.includes(styleMimeType)) {
     throw new Error('Invalid styleMimeType: unsupported image format');
   }
 
@@ -258,16 +293,7 @@ app.post('/api/post-process', apiLimiter, async (req, res) => {
 
     res.json(result.response);
   } catch (error) {
-    const sanitizedError = error instanceof Error ? error.message : 'Unknown error';
-    console.error('Post-processing error:', {
-      timestamp: new Date().toISOString(),
-      error: sanitizedError,
-      stack: process.env.NODE_ENV === 'development' ? error.stack : undefined
-    });
-    res.status(500).json({
-      error: 'Failed to post-process animation',
-      ...(process.env.NODE_ENV === 'development' && { details: sanitizedError })
-    });
+    handleApiError(error, 'post-process animation', res);
   }
 });
 
@@ -278,7 +304,7 @@ const validateDetectObjectsInput = (body) => {
     throw new Error('Invalid base64SpriteSheet: must be a base64 string');
   }
 
-  if (!mimeType || !['image/png', 'image/jpeg', 'image/gif', 'image/webp'].includes(mimeType)) {
+  if (!mimeType || !SERVER_CONFIG.SUPPORTED_IMAGE_FORMATS.includes(mimeType)) {
     throw new Error('Invalid mimeType: unsupported image format');
   }
 
@@ -327,15 +353,6 @@ app.post('/api/detect-objects', apiLimiter, async (req, res) => {
 
     res.json(result.response);
   } catch (error) {
-    const sanitizedError = error instanceof Error ? error.message : 'Unknown error';
-    console.error('Object detection error:', {
-      timestamp: new Date().toISOString(),
-      error: sanitizedError,
-      stack: process.env.NODE_ENV === 'development' ? error.stack : undefined
-    });
-    res.status(500).json({
-      error: 'Failed to detect objects',
-      ...(process.env.NODE_ENV === 'development' && { details: sanitizedError })
-    });
+    handleApiError(error, 'detect objects', res);
   }
 });
