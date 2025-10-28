@@ -57,9 +57,30 @@ const validateApiKey = (req, res, next) => {
   const authHeader = req.headers.authorization;
   const expectedKey = process.env.CLIENT_API_SECRET;
 
-  if (!authHeader || authHeader !== `Bearer ${expectedKey}`) {
+  if (!expectedKey) {
+    // Check if the secret is configured, but don't leak this info in the response
+    console.error('CLIENT_API_SECRET is not set');
     return res.status(401).json({ error: 'Unauthorized' });
   }
+
+  if (!authHeader || !authHeader.startsWith('Bearer ')) {
+    return res.status(401).json({ error: 'Unauthorized' });
+  }
+
+  const providedKey = authHeader.split(' ')[1];
+
+  // Timing-safe comparison to mitigate timing attacks
+  const providedKeyBuffer = Buffer.from(providedKey);
+  const expectedKeyBuffer = Buffer.from(expectedKey);
+
+  if (providedKeyBuffer.length !== expectedKeyBuffer.length) {
+    return res.status(401).json({ error: 'Unauthorized' });
+  }
+
+  if (!crypto.timingSafeEqual(providedKeyBuffer, expectedKeyBuffer)) {
+    return res.status(401).json({ error: 'Unauthorized' });
+  }
+
   next();
 };
 

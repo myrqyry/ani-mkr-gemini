@@ -172,10 +172,6 @@ const App: React.FC = () => {
   }, []);
   
   useEffect(() => {
-    if (typingAnimationRef.current?.timeoutId) {
-      clearTimeout(typingAnimationRef.current.timeoutId);
-    }
-
     if (storyPrompt.trim() || isPromptFocused) {
       memoizedDispatch({ type: 'SET_TYPED_PLACEHOLDER', payload: '' });
       return;
@@ -216,14 +212,22 @@ const App: React.FC = () => {
       }
 
       state.text = text;
-      typingAnimationRef.current.timeoutId = setTimeout(tick, newSpeed);
+      if (typingAnimationRef.current) {
+        typingAnimationRef.current.timeoutId = setTimeout(tick, newSpeed);
+      }
     };
 
-    typingAnimationRef.current.timeoutId = setTimeout(tick, TYPING_ANIMATION_SPEED);
+    const startTimeoutId = setTimeout(tick, TYPING_ANIMATION_SPEED);
+    if (typingAnimationRef.current) {
+      typingAnimationRef.current.timeoutId = startTimeoutId;
+    }
 
     return () => {
-      if (typingAnimationRef.current?.timeoutId) {
-        clearTimeout(typingAnimationRef.current.timeoutId);
+      const state = typingAnimationRef.current;
+      if (state && state.id === animationId) {
+        if (state.timeoutId) {
+          clearTimeout(state.timeoutId);
+        }
         typingAnimationRef.current = null;
       }
     };
