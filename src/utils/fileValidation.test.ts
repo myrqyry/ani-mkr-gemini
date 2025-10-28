@@ -29,7 +29,7 @@ describe('fileValidation', () => {
       
       expect(result.valid).toBe(false);
       expect(result.error).toContain('exceeds the maximum');
-      expect(result.error).toContain('10MB');
+      expect(result.error).toContain('4MB');
     });
   });
 
@@ -70,7 +70,7 @@ describe('fileValidation', () => {
 
   describe('FILE_VALIDATION constants', () => {
     it('should have reasonable size limits', () => {
-      expect(FILE_VALIDATION.MAX_FILE_SIZE).toBe(10 * 1024 * 1024); // 10MB
+      expect(FILE_VALIDATION.MAX_FILE_SIZE).toBe(4 * 1024 * 1024); // 4MB
     });
 
     it('should have reasonable dimension limits', () => {

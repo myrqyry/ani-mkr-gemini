@@ -2,7 +2,7 @@
  * @license
  * SPDX-License-Identifier: Apache-2.0
 */
-import { AnimationAssets, BoundingBox } from '../services/geminiService';
+import { AnimationAssets, BoundingBox } from '../services/gemini';
 
 /**
  * The status of the app.
