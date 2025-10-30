@@ -109,7 +109,7 @@ export const generateAnimationAssets = async (
         return result;
     }
 
-    return { imageData, frames: [], frameDuration };
+    throw new Error('Animation generation stream completed without a result.');
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : 'Unknown error';
     console.error('Error during asset generation:', { error: errorMessage, stack: error.stack });
