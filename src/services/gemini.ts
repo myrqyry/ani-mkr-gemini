@@ -78,52 +78,35 @@ export const generateAnimationAssets = async (
     }
 
     const decoder = new TextDecoder();
-    let fullResponse = '';
+    let buffer = '';
+    let result: AnimationAssets | null = null;
+
     while (true) {
       const { done, value } = await reader.read();
-      if (done) break;
-      fullResponse += decoder.decode(value, { stream: true });
-    }
-
-    // The streamed response is a series of JSON objects. We need to parse them.
-    const jsonChunks = fullResponse.replace(/}{/g, '},{').split('},{');
-    const parsedChunks = jsonChunks.map((chunk, index) => {
-      if (index > 0) chunk = '{' + chunk;
-      if (index < jsonChunks.length - 1) chunk = chunk + '}';
-      return JSON.parse(chunk);
-    });
-
-    // Now, we need to find the image data in the parsed chunks
-    const imagePart = parsedChunks
-      .flatMap((c) => c.candidates?.[0]?.content?.parts ?? [])
-      .find((p) => p.inlineData);
-    if (!imagePart?.inlineData?.data) {
-      throw new Error('No image part found in response from proxy.');
-    }
-    const imageData = {
-      data: imagePart.inlineData.data,
-      mimeType: imagePart.inlineData.mimeType,
-    };
-
-    let frameDuration = 120; // Default fallback value
-    const textPart = parsedChunks
-      .flatMap((c) => c.candidates?.[0]?.content?.parts ?? [])
-      .find((p) => p.text);
-    if (textPart?.text) {
-      try {
-        const jsonStringMatch = textPart.text.match(/{.*}/s);
-        if (jsonStringMatch) {
-          const parsed = JSON.parse(jsonStringMatch[0]);
-          if (parsed.frameDuration && typeof parsed.frameDuration === 'number') {
-            frameDuration = parsed.frameDuration;
-          }
-        }
-      } catch (e) {
-        console.warn(
-          'Could not parse frame duration from model response. Using default.',
-          e,
-        );
+      if (done) {
+        break;
       }
+      buffer += decoder.decode(value, { stream: true });
+      const lines = buffer.split('\n');
+      buffer = lines.pop() || ''; // Keep the last, possibly incomplete line
+
+      for (const line of lines) {
+        if (line.trim() === '') continue;
+        try {
+          const chunk = JSON.parse(line);
+          if (chunk.type === 'progress' && chunk.message) {
+            onProgress(chunk.message);
+          } else if (chunk.type === 'result') {
+            result = chunk;
+          }
+        } catch (error) {
+          console.error('Error parsing streaming chunk:', error, 'Chunk:', line);
+        }
+      }
+    }
+
+    if (result) {
+        return result;
     }
 
     return { imageData, frames: [], frameDuration };

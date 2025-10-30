@@ -1,12 +1,12 @@
-import React from 'react';
 import { describe, it, expect, vi } from 'vitest';
 import { renderHook, act } from '@testing-library/react';
 import { useAnimationCreator } from './useAnimationCreator';
-import * as geminiService from '../services/gemini';
 import * as imageUtils from '../utils/image';
 import { AppStatus } from '../types/types';
 
-vi.mock('../services/gemini');
+// Mock the global fetch function
+global.fetch = vi.fn();
+
 vi.mock('../utils/image');
 
 describe('useAnimationCreator', () => {
@@ -17,10 +17,29 @@ describe('useAnimationCreator', () => {
     const setAnimationAssets = vi.fn();
     const setStoryPrompt = vi.fn();
 
-    vi.mocked(geminiService.generateAnimationAssets).mockResolvedValue({
-      imageData: { data: 'mock_image_data', mimeType: 'image/jpeg' },
-      frameDuration: 100,
+    // Mock the streaming response
+    const mockStream = new ReadableStream({
+      start(controller) {
+        const encoder = new TextEncoder();
+        const progressChunk = { type: 'progress', message: 'Generating frames...' };
+        const resultChunk = {
+          type: 'result',
+          imageData: { data: 'mock_image_data', mimeType: 'image/jpeg' },
+          frameDuration: 100,
+        };
+        controller.enqueue(encoder.encode(JSON.stringify(progressChunk) + '\n'));
+        controller.enqueue(encoder.encode(JSON.stringify(resultChunk) + '\n'));
+        controller.close();
+      },
     });
+
+    const mockResponse = {
+      ok: true,
+      body: mockStream,
+      headers: new Headers({ 'Content-Type': 'application/json' }),
+    };
+    (fetch as any).mockResolvedValue(mockResponse);
+
     vi.mocked(imageUtils.resizeImage).mockResolvedValue({
       dataUrl: 'data:image/jpeg;base64,mock_image_data',
       mime: 'image/jpeg',
@@ -35,6 +54,7 @@ describe('useAnimationCreator', () => {
       setError,
       setAnimationAssets,
       setStoryPrompt,
+      null
     ));
 
     await act(async () => {
