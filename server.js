@@ -8,18 +8,18 @@ import DOMPurify from 'isomorphic-dompurify';
 import crypto from 'crypto';
 import { SERVER_CONFIG } from './src/constants/server.js';
 import { validateEnvironment } from './src/utils/validateEnv.js';
+import { getEnvironmentConfig } from './src/config/environment.js';
 
 dotenv.config();
 validateEnvironment();
 
 const app = express();
 const port = 3001;
+const envConfig = getEnvironmentConfig();
 
 app.use(cors({
-  origin: process.env.NODE_ENV === 'production'
-    ? ['https://yourdomain.com']
-    : ['http://localhost:3000', 'http://localhost:5173'],
-  credentials: true
+  origin: envConfig.origins,
+  credentials: envConfig.corsCredentials
 }));
 
 app.use((req, res, next) => {

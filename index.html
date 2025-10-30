@@ -1,16 +1,16 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <link rel="icon" type="image/svg+xml" href="/src/assets/favicon.svg" />
+    <link rel="icon" type="image/x-icon" href="/favicon.ico" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>ani-mkr-gemini</title>
-    <link rel="stylesheet" href="/index.css">
-    <script src="https://cdn.jsdelivr.net/npm/gifshot/dist/gifshot.min.js" async></script>
-    <script src="https://cdn.jsdelivr.net/npm/onnxruntime-web/dist/ort.min.js" async></script>
-    <script src="https://cdn.jsdelivr.net/npm/jszip/dist/jszip.min.js" async></script>
+    <title>Ani-MKR Gemini</title>
+    <script src="https://unpkg.com/@google/generative-ai@0.15.0/dist/index.js" defer></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gifshot/0.4.5/gifshot.min.js" defer></script>
+    <script src="https://cdn.jsdelivr.net/npm/onnxruntime-web/dist/ort.min.js" defer></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js" defer></script>
   </head>
-  <body class="bg-gray-900">
+  <body class="bg-[var(--color-background)]">
     <div id="root"></div>
     <script type="module" src="/index.tsx"></script>
   </body>
