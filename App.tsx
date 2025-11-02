@@ -3,9 +3,8 @@
  * SPDX-License-Identifier: Apache-2.0
 */
 
-
 import React, { useState, useCallback, useRef, useEffect, useReducer, useMemo } from 'react';
-import { AppState, ImageState, AppStatus } from 'src/types/types';
+import { AppState, AppStatus, AppError } from 'src/types/types';
 import { AnimationAssets, BoundingBox } from 'src/services/gemini';
 import { promptSuggestions } from 'prompts';
 import CameraView, { CameraViewHandles } from 'src/components/CameraView';
@@ -35,6 +34,11 @@ import {
   TYPING_ANIMATION_SHORT_PAUSE_MS,
 } from 'src/constants/app';
 
+import CaptureView from 'src/components/views/CaptureView';
+import AnimationView from 'src/components/views/AnimationView';
+import ErrorView from 'src/components/views/ErrorView';
+import LoadingView from 'src/components/views/LoadingView';
+
 // --- FEATURE FLAGS ---
 // Set to `true` to make uploading or capturing an image mandatory to create an animation.
 // Set to `false` to allow creating animations from only a text prompt.
@@ -52,6 +56,13 @@ interface TypingAnimationState {
   timeoutId: number | null;
   speed: number;
 }
+
+const createAppError = (type: AppError['type'], message: string, originalError?: Error): AppError => ({
+  type,
+  message,
+  retryable: ['network', 'api'].includes(type),
+  originalError,
+});
 
 /**
  * The main App component.
@@ -71,9 +82,13 @@ const App: React.FC = () => {
   } = useThemeManager();
   const [state, dispatch] = useReducer(appReducer, initialState);
 
-  const memoizedDispatch = useCallback((action) => {
-    dispatch(action);
-  }, []);
+  const stableCallbacks = useMemo(() => ({
+    setAppStatus: (payload: AppStatus) => dispatch({ type: 'SET_APP_STATUS', payload }),
+    setLoadingMessage: (payload: string) => dispatch({ type: 'SET_LOADING_MESSAGE', payload }),
+    setError: (payload: AppError | null) => dispatch({ type: 'SET_ERROR', payload }),
+    setAnimationAssets: (payload: AnimationAssets | null) => dispatch({ type: 'SET_ANIMATION_ASSETS', payload }),
+    setStoryPrompt: (payload: string) => dispatch({ type: 'SET_STORY_PROMPT', payload }),
+  }), []);
 
   const {
     appStatus,
@@ -93,11 +108,6 @@ const App: React.FC = () => {
     isExportModalOpen,
   } = state;
 
-  const memoizedState = useMemo(() => ({
-    appStatus,
-    imageState,
-  }), [appStatus, imageState.original]);
-
   const cameraViewRef = useRef<CameraViewHandles>(null);
   const storyPromptTextareaRef = useRef<HTMLTextAreaElement>(null);
   const fileUploadManagerRef = useRef<FileUploadManagerHandles>(null);
@@ -108,11 +118,11 @@ const App: React.FC = () => {
     imageState,
     storyPrompt,
     frameCount,
-    (payload) => memoizedDispatch({ type: 'SET_APP_STATUS', payload }),
-    (payload) => memoizedDispatch({ type: 'SET_LOADING_MESSAGE', payload }),
-    (payload) => memoizedDispatch({ type: 'SET_ERROR', payload }),
-    (payload) => memoizedDispatch({ type: 'SET_ANIMATION_ASSETS', payload }),
-    (payload) => memoizedDispatch({ type: 'SET_STORY_PROMPT', payload }),
+    stableCallbacks.setAppStatus,
+    stableCallbacks.setLoadingMessage,
+    stableCallbacks.setError,
+    stableCallbacks.setAnimationAssets,
+    stableCallbacks.setStoryPrompt,
     state.selectedAsset,
   );
 
@@ -137,10 +147,10 @@ const App: React.FC = () => {
 
   const { handleDetectObjects } = useObjectDetection(
     animationAssets,
-    (payload) => memoizedDispatch({ type: 'SET_APP_STATUS', payload }),
-    (payload) => memoizedDispatch({ type: 'SET_LOADING_MESSAGE', payload }),
-    (payload) => memoizedDispatch({ type: 'SET_ERROR', payload }),
-    (payload) => memoizedDispatch({ type: 'SET_DETECTED_OBJECTS', payload }),
+    stableCallbacks.setAppStatus,
+    stableCallbacks.setLoadingMessage,
+    stableCallbacks.setError,
+    (payload) => dispatch({ type: 'SET_DETECTED_OBJECTS', payload }),
   );
 
   const { handlePostProcess } = usePostProcessing(
@@ -149,10 +159,10 @@ const App: React.FC = () => {
     frameCount,
     styleIntensity,
     postProcessStrength,
-    (payload) => memoizedDispatch({ type: 'SET_APP_STATUS', payload }),
-    (payload) => memoizedDispatch({ type: 'SET_LOADING_MESSAGE', payload }),
-    (payload) => memoizedDispatch({ type: 'SET_ERROR', payload }),
-    (payload) => memoizedDispatch({ type: 'SET_ANIMATION_ASSETS', payload }),
+    stableCallbacks.setAppStatus,
+    stableCallbacks.setLoadingMessage,
+    stableCallbacks.setError,
+    stableCallbacks.setAnimationAssets,
   );
 
 
@@ -162,7 +172,7 @@ const App: React.FC = () => {
         try {
           const devices = await navigator.mediaDevices.enumerateDevices();
           const videoInputCount = devices.filter(d => d.kind === 'videoinput').length;
-          memoizedDispatch({ type: 'SET_HAS_MULTIPLE_CAMERAS', payload: videoInputCount > 1 });
+          dispatch({ type: 'SET_HAS_MULTIPLE_CAMERAS', payload: videoInputCount > 1 });
         } catch (err) {
           console.error("Failed to enumerate media devices:", err);
         }
@@ -171,9 +181,17 @@ const App: React.FC = () => {
     checkForMultipleCameras();
   }, []);
   
+  const deferredTypingUpdate = useMemo(() =>
+    debounce((text: string) => {
+      requestIdleCallback(() => {
+        dispatch({ type: 'SET_TYPED_PLACEHOLDER', payload: text });
+      });
+    }, 16),
+  []);
+
   useEffect(() => {
     if (storyPrompt.trim() || isPromptFocused) {
-      memoizedDispatch({ type: 'SET_TYPED_PLACEHOLDER', payload: '' });
+      dispatch({ type: 'SET_TYPED_PLACEHOLDER', payload: '' });
       return;
     }
 
@@ -199,7 +217,7 @@ const App: React.FC = () => {
         text = fullText.substring(0, text.length + 1);
       }
 
-      memoizedDispatch({ type: 'SET_TYPED_PLACEHOLDER', payload: text });
+      deferredTypingUpdate(text);
 
       let newSpeed = isDeleting ? TYPING_ANIMATION_DELETING_SPEED : TYPING_ANIMATION_SPEED;
 
@@ -231,7 +249,7 @@ const App: React.FC = () => {
         typingAnimationRef.current = null;
       }
     };
-  }, [storyPrompt, isPromptFocused, memoizedDispatch]);
+  }, [storyPrompt, isPromptFocused, deferredTypingUpdate]);
   
   useEffect(() => {
     if (imageState.original && shouldAnimateAfterCapture.current) {
@@ -255,36 +273,52 @@ const App: React.FC = () => {
   }, [storyPrompt, isPromptFocused]);
 
   const handleCapture = useCallback(async (imageDataUrl: string) => {
-    memoizedDispatch({ type: 'SET_IMAGE_STATE', payload: { original: imageDataUrl } });
-    memoizedDispatch({ type: 'SET_IS_CAMERA_OPEN', payload: false });
+    try {
+      if (!imageDataUrl || !imageDataUrl.startsWith('data:image/')) {
+        throw createAppError('validation', 'Invalid image data received from camera');
+      }
 
-    await new Promise(resolve => setTimeout(resolve, 0));
+      dispatch({ type: 'SET_IMAGE_STATE', payload: { original: imageDataUrl } });
+      dispatch({ type: 'SET_IS_CAMERA_OPEN', payload: false });
 
-    if (shouldAnimateAfterCapture.current) {
-      shouldAnimateAfterCapture.current = false;
-      handleCreateAnimation();
+      await new Promise(resolve => requestAnimationFrame(resolve));
+
+      if (shouldAnimateAfterCapture.current) {
+        shouldAnimateAfterCapture.current = false;
+        try {
+          await handleCreateAnimation();
+        } catch (animationError) {
+          const appError = createAppError('api', 'Failed to create animation from captured image', animationError as Error);
+          dispatch({ type: 'SET_ERROR', payload: appError });
+        }
+      }
+    } catch (error) {
+      console.error('Error in handleCapture:', error);
+      const appError = error instanceof Error ? createAppError('unknown', error.message, error) : createAppError('unknown', 'Failed to process captured image');
+      dispatch({ type: 'SET_ERROR', payload: appError });
     }
-  }, [memoizedDispatch, handleCreateAnimation]);
+  }, [handleCreateAnimation]);
 
   const handleFlipCamera = () => {
     cameraViewRef.current?.flipCamera();
   };
 
   const handleCameraError = useCallback((message: string) => {
-    memoizedDispatch({ type: 'SET_ERROR', payload: message });
-    memoizedDispatch({ type: 'SET_APP_STATUS', payload: AppStatus.Error });
-  }, [memoizedDispatch]);
+    const appError = createAppError('permission', message);
+    dispatch({ type: 'SET_ERROR', payload: appError });
+    dispatch({ type: 'SET_APP_STATUS', payload: AppStatus.Error });
+  }, []);
 
   const handleClearImage = () => {
-    memoizedDispatch({ type: 'SET_IMAGE_STATE', payload: { original: null } });
-    memoizedDispatch({ type: 'SET_IS_CAMERA_OPEN', payload: false });
+    dispatch({ type: 'SET_IMAGE_STATE', payload: { original: null } });
+    dispatch({ type: 'SET_IS_CAMERA_OPEN', payload: false });
   };
   
   const handleBack = () => {
-    memoizedDispatch({ type: 'SET_APP_STATUS', payload: AppStatus.Capturing });
-    memoizedDispatch({ type: 'SET_ANIMATION_ASSETS', payload: null });
-    memoizedDispatch({ type: 'SET_ERROR', payload: null });
-    memoizedDispatch({ type: 'SET_DETECTED_OBJECTS', payload: null });
+    dispatch({ type: 'SET_APP_STATUS', payload: AppStatus.Capturing });
+    dispatch({ type: 'SET_ANIMATION_ASSETS', payload: null });
+    dispatch({ type: 'SET_ERROR', payload: null });
+    dispatch({ type: 'SET_DETECTED_OBJECTS', payload: null });
   };
   
   const handleSuggestionClick = (prompt: string) => {
@@ -296,9 +330,9 @@ const App: React.FC = () => {
       } else {
         prompts.push(prompt);
       }
-      memoizedDispatch({ type: 'SET_STORY_PROMPT', payload: prompts.join(', ') });
+      dispatch({ type: 'SET_STORY_PROMPT', payload: prompts.join(', ') });
     } else {
-      memoizedDispatch({
+      dispatch({
         type: 'SET_STORY_PROMPT',
         payload: storyPrompt === prompt ? '' : prompt,
       });
@@ -318,254 +352,67 @@ const App: React.FC = () => {
   
   const isAniMkrGeminiDisabled = !isCameraOpen && !imageState.original && (REQUIRE_IMAGE_FOR_ANIMATION || !storyPrompt.trim());
 
-  const CONTAINER_CLASSES = "flex flex-col items-center justify-center w-full max-w-md mx-auto";
-
   const renderContent = useMemo(() => {
     switch (appStatus) {
       case AppStatus.Capturing:
         return (
-          <div className={CONTAINER_CLASSES}>
-             <div className="w-full mt-3 mb-2 overflow-x-auto no-scrollbar" aria-label="Animation style suggestions">
-                <div className="w-max mx-auto flex items-center gap-x-3 sm:gap-x-4 px-4">
-                  {promptSuggestions.map(({ emoji, prompt }) => {
-                    const isActive = ALLOW_MULTIPLE_EMOJI_SELECTION
-                      ? storyPrompt.includes(prompt)
-                      : storyPrompt === prompt;
-                    
-                    const ariaLabelAction = ALLOW_MULTIPLE_EMOJI_SELECTION
-                      ? (isActive ? 'Remove' : 'Add')
-                      : (isActive ? 'Deselect' : 'Select');
-                      
-                    return (
-                      <button
-                        key={emoji}
-                        onClick={() => handleSuggestionClick(prompt)}
-                        className={`text-3xl p-2 rounded-full transform transition-colors transition-transform duration-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--color-background)] focus-visible:ring-[var(--color-accent)] ${isActive ? 'bg-[var(--color-accent)] scale-110' : 'hover:bg-[var(--color-overlay)] hover:scale-110'}`}
-                        title={prompt}
-                        aria-label={`${ariaLabelAction} animation prompt: ${prompt}`}
-                      >
-                        {emoji}
-                      </button>
-                    );
-                  })}
-                </div>
-            </div>
-            <div className="flex justify-center gap-2 mb-2">
-                {FRAME_COUNTS.map(count => (
-                  <button
-                    key={count}
-                    onClick={() => memoizedDispatch({ type: 'SET_FRAME_COUNT', payload: count })}
-                    className={`px-4 py-1 rounded-md text-sm font-medium transition-all focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--color-background)] focus-visible:ring-[var(--color-accent)] ${
-                      frameCount === count
-                        ? 'bg-[var(--color-accent)] text-white scale-105'
-                        : 'bg-[var(--color-button)] text-[var(--color-text-muted)] hover:bg-[var(--color-button-hover)] hover:scale-105'
-                    }`}
-                  >
-                    {count} Frames
-                  </button>
-                ))}
-            </div>
-            <div className="w-full mb-2 relative">
-              {/* A 'fake' placeholder is used because the native placeholder attribute doesn't support newlines. */}
-              {!storyPrompt && !isPromptFocused && (
-                <div data-testid="placeholder-text" className="absolute top-0 left-0 px-4 py-3 text-[var(--color-text-muted)] text-lg pointer-events-none" aria-hidden="true">
-                  What would you like to <span className="text-[var(--color-warning)]">create</span>?<br />
-                  <span className="text-[var(--color-text-subtle)]">
-                    {typedPlaceholder}
-                    <span className="animate-pulse font-normal">|</span>
-                  </span>
-                </div>
-              )}
-              <textarea
-                ref={storyPromptTextareaRef}
-                id="storyPrompt"
-                rows={3}
-                className="w-full bg-[var(--color-overlay)] text-[var(--color-text-base)] border border-[var(--color-surface-alt)] rounded-lg px-4 py-3 focus:ring-[var(--color-accent)] focus:border-[var(--color-accent)] transition-all duration-300 text-lg resize-none overflow-y-auto"
-                value={storyPrompt}
-                onChange={e => memoizedDispatch({ type: 'SET_STORY_PROMPT', payload: e.target.value })}
-                onFocus={() => memoizedDispatch({ type: 'SET_IS_PROMPT_FOCUSED', payload: true })}
-                onBlur={() => {
-                  // We add a small delay to allow click events on other elements to fire before the blur causes a layout shift.
-                  memoizedDispatch({ type: 'SET_IS_PROMPT_FOCUSED', payload: false });
-                }}
-                aria-label="Animation prompt"
-              />
-            </div>
-            <FileUploadManager
-              ref={fileUploadManagerRef}
-              imageState={imageState}
-              setImageState={(payload) => memoizedDispatch({ type: 'SET_IMAGE_STATE', payload })}
-              styleIntensity={styleIntensity}
-              setStyleIntensity={(payload) => memoizedDispatch({ type: 'SET_STYLE_INTENSITY', payload })}
-              setStoryPrompt={(payload) => memoizedDispatch({ type: 'SET_STORY_PROMPT', payload })}
-              setAppState={(payload) => memoizedDispatch({ type: 'SET_APP_STATUS', payload })}
-              setLoadingMessage={(payload) => memoizedDispatch({ type: 'SET_LOADING_MESSAGE', payload })}
-              setError={(payload) => memoizedDispatch({ type: 'SET_ERROR', payload })}
-            />
-            <AssetManager onAssetSelect={handleAssetSelect} />
-            {error && (() => {
-              const errorInfo = categorizeError(error);
-              const errorTitle = getErrorTitle(errorInfo);
-              return (
-                <div className="w-full bg-[var(--color-danger-surface)] border border-[var(--color-danger)] text-[var(--color-danger-text)] px-4 py-3 rounded-lg relative mb-4 animate-fade-in" role="alert">
-                  <div className="flex items-start justify-between">
-                    <div className="flex-1 pr-4">
-                      <strong className="font-bold block">{errorTitle}</strong>
-                      {errorInfo.suggestion && (
-                        <span className="text-sm block mt-1">{errorInfo.suggestion}</span>
-                      )}
-                      <details className="mt-2">
-                        <summary className="text-xs cursor-pointer hover:underline">Technical details</summary>
-                        <pre className="text-xs mt-1 whitespace-pre-wrap break-words">{errorInfo.message}</pre>
-                      </details>
-                    </div>
-                    <button
-                      onClick={() => memoizedDispatch({ type: 'SET_ERROR', payload: null })}
-                      className="p-1 -mr-2 flex-shrink-0"
-                      aria-label="Close error message"
-                    >
-                      <XCircleIcon className="w-6 h-6" />
-                    </button>
-                  </div>
-                  {errorInfo.canRetry && (
-                    <div className="mt-3 flex gap-2">
-                      <button
-                        onClick={() => {
-                          memoizedDispatch({ type: 'SET_ERROR', payload: null });
-                          handleCreateAnimation();
-                        }}
-                        className="bg-[var(--color-accent)] text-white font-semibold py-2 px-4 rounded hover:bg-[var(--color-accent-hover)] transition-colors transition-transform duration-300 text-sm transform hover:scale-105"
-                      >
-                        Try Again
-                      </button>
-                      <button
-                        onClick={() => memoizedDispatch({ type: 'SET_ERROR', payload: null })}
-                        className="bg-[var(--color-surface)] text-[var(--color-text-base)] font-semibold py-2 px-4 rounded hover:bg-[var(--color-surface-hover)] transition-colors transition-transform duration-300 text-sm border border-[var(--color-border)] transform hover:scale-105"
-                      >
-                        Dismiss
-                      </button>
-                    </div>
-                  )}
-                </div>
-              );
-            })()}
-            
-            <div
-              className="relative w-full [@media(max-height:750px)]:w-96 [@media(max-height:650px)]:w-72 aspect-square bg-[var(--color-surface)] rounded-lg overflow-hidden shadow-2xl flex items-center justify-center"
-              onDragEnter={(e) => fileUploadManagerRef.current?.handleDragEnter(e)}
-              onDragLeave={(e) => fileUploadManagerRef.current?.handleDragLeave(e)}
-              onDragOver={(e) => fileUploadManagerRef.current?.handleDragOver(e)}
-              onDrop={(e) => fileUploadManagerRef.current?.handleMainDrop(e)}
-            >
-              {imageState.original ? (
-                  <>
-                      <img src={imageState.original} alt="Preview" className="w-full h-full object-cover" />
-                      <button
-                        onClick={handleClearImage}
-                        className="absolute top-4 left-4 bg-black/50 p-2 rounded-full text-white hover:bg-black/75 transition-colors transition-transform duration-200 transform hover:scale-110 focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-black focus-visible:ring-[var(--color-accent)]"
-                        aria-label="Remove image"
-                      >
-                        <XCircleIcon className="w-6 h-6" />
-                      </button>
-                  </>
-              ) : isCameraOpen ? (
-                  <>
-                      <CameraView ref={cameraViewRef} onCapture={handleCapture} onError={handleCameraError} />
-                       <button
-                          onClick={() => memoizedDispatch({ type: 'SET_IS_CAMERA_OPEN', payload: false })}
-                          className="absolute top-4 left-4 bg-black/50 p-2 rounded-full text-white hover:bg-black/75 transition-colors transition-transform duration-200 transform hover:scale-110 focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-black focus-visible:ring-[var(--color-accent)]"
-                          aria-label="Close camera"
-                      >
-                        <XCircleIcon className="w-6 h-6" />
-                      </button>
-                      {hasMultipleCameras && (
-                          <button
-                              onClick={handleFlipCamera}
-                              className="absolute top-4 right-4 bg-black/50 p-2 rounded-full text-white hover:bg-black/75 transition-colors transition-transform duration-200 transform hover:scale-110 focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-black focus-visible:ring-[var(--color-accent)]"
-                              aria-label="Flip camera"
-                          >
-                              <SwitchCameraIcon className="w-6 h-6" />
-                          </button>
-                      )}
-                  </>
-              ) : (
-                <div className="flex flex-col items-center justify-center h-full w-full pb-32">
-                  <p className="mb-4 text-[var(--color-text-muted)] text-lg">
-                    {REQUIRE_IMAGE_FOR_ANIMATION ? 'Add an image to start' : 'Optionally, add an image to start'}
-                  </p>
-                  <div className="flex flex-col items-center gap-4">
-                    <button
-                      onClick={() => memoizedDispatch({ type: 'SET_IS_CAMERA_OPEN', payload: true })}
-                      className="w-52 bg-[var(--color-accent)] text-white font-bold py-3 px-6 rounded-lg hover:bg-[var(--color-accent-hover)] transition-colors transition-transform duration-300 flex items-center justify-center focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-black focus-visible:ring-[var(--color-accent)] transform hover:scale-105"
-                      aria-label="Use camera to take a photo"
-                    >
-                      <CameraIcon className="w-6 h-6 mr-3" />
-                      Open Camera
-                    </button>
-                    <button
-                      onClick={() => fileUploadManagerRef.current?.handleUploadClick()}
-                      className="w-52 bg-[var(--color-button)] text-white font-bold py-3 px-6 rounded-lg hover:bg-[var(--color-button-hover)] transition-colors transition-transform duration-300 flex items-center justify-center focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-black focus-visible:ring-[var(--color-accent)] transform hover:scale-105"
-                      aria-label="Upload an image from your device"
-                    >
-                      <UploadIcon className="w-6 h-6 mr-3" />
-                      Upload Image
-                    </button>
-                    <button
-                      onClick={() => fileUploadManagerRef.current?.handlePasteUrl('main')}
-                      className="w-52 bg-[var(--color-button)] text-white font-bold py-3 px-6 rounded-lg hover:bg-[var(--color-button-hover)] transition-colors transition-transform duration-300 flex items-center justify-center focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-black focus-visible:ring-[var(--color-accent)] transform hover:scale-105"
-                      aria-label="Paste an image URL"
-                    >
-                      <LinkIcon className="w-6 h-6 mr-3" />
-                      Paste URL
-                    </button>
-                  </div>
-                </div>
-              )}
-              {/* Button is now positioned over the image/camera view */}
-              <div className="absolute bottom-4 left-1/2 -translate-x-1/2 z-10">
-                <AniMkrGeminiButton
-                  onClick={handlePrimaryAction}
-                  disabled={isAniMkrGeminiDisabled}
-                  aria-label={isCameraOpen ? 'Capture and Animate' : 'Create Animation'}
-                />
-              </div>
-            </div>
-          </div>
+          <CaptureView
+            state={state}
+            dispatch={dispatch}
+            handleSuggestionClick={handleSuggestionClick}
+            handleCreateAnimation={handleCreateAnimation}
+            handleCapture={handleCapture}
+            handleClearImage={handleClearImage}
+            handleFlipCamera={handleFlipCamera}
+            fileUploadManagerRef={fileUploadManagerRef}
+            cameraViewRef={cameraViewRef}
+            storyPromptTextareaRef={storyPromptTextareaRef}
+            isAniMkrGeminiDisabled={isAniMkrGeminiDisabled}
+            handlePrimaryAction={handlePrimaryAction}
+            hasMultipleCameras={hasMultipleCameras}
+            isCameraOpen={isCameraOpen}
+            REQUIRE_IMAGE_FOR_ANIMATION={REQUIRE_IMAGE_FOR_ANIMATION}
+            ALLOW_MULTIPLE_EMOJI_SELECTION={ALLOW_MULTIPLE_EMOJI_SELECTION}
+          />
         );
       case AppStatus.Processing:
-        return <LoadingOverlay message={loadingMessage} />;
+        return <LoadingView state={state} />;
       case AppStatus.Animating:
-        return animationAssets ? (
-          <AnimationPlayer 
-            assets={animationAssets} 
-            frameCount={frameCount} 
-            onRegenerate={() => handleCreateAnimation(true)} 
-            onBack={handleBack}
-            onExport={() => memoizedDispatch({ type: 'SET_IS_EXPORT_MODAL_OPEN', payload: true })}
-            onPostProcess={handlePostProcess}
-            onDetectObjects={handleDetectObjects}
-            detectedObjects={detectedObjects}
-            error={error}
-            clearError={() => memoizedDispatch({ type: 'SET_ERROR', payload: null })}
-            styleImage={imageState.style}
-            postProcessStrength={postProcessStrength}
-            onPostProcessStrengthChange={(payload) => memoizedDispatch({ type: 'SET_POST_PROCESS_STRENGTH', payload })}
+        return (
+          <AnimationView
+            state={state}
+            handleCreateAnimation={handleCreateAnimation}
+            handleBack={handleBack}
+            handlePostProcess={handlePostProcess}
+            handleDetectObjects={handleDetectObjects}
+            dispatch={dispatch}
           />
-        ) : null;
+        );
       case AppStatus.Error:
         return (
-          <div className="text-center bg-[var(--color-danger-surface)] p-8 rounded-lg max-w-md w-full">
-            <p className="text-[var(--color-text-base)] mb-6 font-medium text-lg">{error}</p>
-            <button
-              onClick={handleBack}
-              className="bg-[var(--color-accent)] text-white font-bold py-3 px-6 rounded-lg hover:bg-[var(--color-accent-hover)] transition-colors transition-transform duration-300 transform hover:scale-105 focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-black focus-visible:ring-[var(--color-accent)]"
-            >
-              Try Again
-            </button>
-          </div>
+          <ErrorView
+            state={state}
+            handleBack={handleBack}
+          />
         );
     }
-  }, [appStatus, animationAssets, error, frameCount, handleBack, handleCreateAnimation, handleDetectObjects, handlePostProcess, imageState.style, loadingMessage, postProcessStrength, detectedObjects]);
+  }, [
+    state,
+    appStatus,
+    dispatch,
+    handleSuggestionClick,
+    handleCreateAnimation,
+    handleCapture,
+    handleClearImage,
+    handleFlipCamera,
+    isAniMkrGeminiDisabled,
+    handlePrimaryAction,
+    hasMultipleCameras,
+    isCameraOpen,
+    handleBack,
+    handlePostProcess,
+    handleDetectObjects,
+  ]);
 
   return (
     <div className="h-dvh bg-[var(--color-background)] text-[var(--color-text-base)] flex flex-col items-center p-4 overflow-y-auto animate-fade-in">

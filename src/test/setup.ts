@@ -83,6 +83,22 @@ const ResizeObserverMock = vi.fn(() => ({
 }));
 vi.stubGlobal('ResizeObserver', ResizeObserverMock);
 
+// Mock requestIdleCallback
+vi.stubGlobal('requestIdleCallback', (callback: (deadline: { didTimeout: boolean; timeRemaining: () => number }) => void) => {
+  const handle = setTimeout(() => {
+    callback({
+      didTimeout: false,
+      timeRemaining: () => 50,
+    });
+  }, 0);
+  return handle;
+});
+
+// Mock cancelIdleCallback
+vi.stubGlobal('cancelIdleCallback', (handle: number) => {
+  clearTimeout(handle);
+});
+
 // runs a cleanup after each test case (e.g. clearing jsdom)
 afterEach(() => {
   cleanup();

@@ -1,9 +1,16 @@
 import { useCallback, useRef, useEffect } from 'react';
-import { AppStatus, ImageState, AnimationAssets } from '../types/types';
+import { AppStatus, ImageState, AnimationAssets, AppError } from '../types/types';
 import { generateAnimationAssets } from '../services/gemini';
 import { buildCreativeInstruction, promptSuggestions } from '../../prompts';
 import { resizeImage } from '../utils/image';
 import { MAIN_IMAGE_MAX_SIZE } from '../constants/app';
+
+const createAppError = (type: AppError['type'], message: string, originalError?: Error): AppError => ({
+  type,
+  message,
+  retryable: ['network', 'api'].includes(type),
+  originalError,
+});
 
 /**
  * A hook for creating animations.
@@ -12,7 +19,7 @@ import { MAIN_IMAGE_MAX_SIZE } from '../constants/app';
  * @param {number} frameCount - The number of frames in the animation.
  * @param {React.Dispatch<React.SetStateAction<AppStatus>>} setAppState - Function to set the app state.
  * @param {React.Dispatch<React.SetStateAction<string>>} setLoadingMessage - Function to set the loading message.
- * @param {React.Dispatch<React.SetStateAction<string | null>>} setError - Function to set the error.
+ * @param {React.Dispatch<React.SetStateAction<AppError | null>>} setError - Function to set the error.
  * @param {React.Dispatch<React.SetStateAction<AnimationAssets | null>>} setAnimationAssets - Function to set the animation assets.
  * @param {React.Dispatch<React.SetStateAction<string>>} setStoryPrompt - Function to set the story prompt.
  * @returns {{ handleCreateAnimation: (isRegeneration?: boolean) => Promise<void> }} - An object with a function to create an animation.
@@ -21,11 +28,11 @@ export const useAnimationCreator = (
   imageState: ImageState,
   storyPrompt: string,
   frameCount: number,
-  setAppState: React.Dispatch<React.SetStateAction<AppStatus>>,
-  setLoadingMessage: React.Dispatch<React.SetStateAction<string>>,
-  setError: React.Dispatch<React.SetStateAction<string | null>>,
-  setAnimationAssets: React.Dispatch<React.SetStateAction<AnimationAssets | null>>,
-  setStoryPrompt: React.Dispatch<React.SetStateAction<string>>,
+  setAppState: (payload: AppStatus) => void,
+  setLoadingMessage: (payload: string) => void,
+  setError: (payload: AppError | null) => void,
+  setAnimationAssets: (payload: AnimationAssets | null) => void,
+  setStoryPrompt: (payload: string) => void,
   selectedAsset: any,
 ) => {
   const abortControllerRef = useRef<AbortController | null>(null);
@@ -118,13 +125,15 @@ export const useAnimationCreator = (
     } catch (err) {
       if (!abortControllerRef.current?.signal.aborted) {
         console.error(err);
-        setError(err instanceof Error ? err.message : 'An unknown error occurred.');
+        const appError = createAppError('api', err instanceof Error ? err.message : 'An unknown error occurred.', err instanceof Error ? err : undefined);
+        setError(appError);
         setAppState(AppStatus.Capturing);
       }
     }
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
-    setError(errorMessage);
+    const appError = createAppError('unknown', errorMessage, error instanceof Error ? error : undefined);
+    setError(appError);
     console.error('Animation creation failed:', error);
   }
 }, [storyPrompt, imageState.original, selectedAsset, frameCount, setAppState, setLoadingMessage, setError, setAnimationAssets, setStoryPrompt]);

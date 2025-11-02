@@ -1,49 +1,53 @@
 import { useCallback } from 'react';
-import { AppStatus, AnimationAssets, BoundingBox } from '../types/types';
-import { detectObjectsInAnimation } from '../services/gemini';
-import { buildObjectDetectionPrompt } from '../../prompts';
+import { AppStatus, AnimationAssets, BoundingBox, AppError } from '../types/types';
+import { detectObjects } from '../services/gemini';
+import { OBJECT_DETECTION_PROMPT } from '../../prompts';
+
+const createAppError = (type: AppError['type'], message: string, originalError?: Error): AppError => ({
+  type,
+  message,
+  retryable: ['network', 'api'].includes(type),
+  originalError,
+});
 
 /**
  * A hook for detecting objects in an animation.
- * @param {AnimationAssets | null} animationAssets - The assets for the animation.
+ * @param {AnimationAssets | null} animationAssets - The assets of the animation.
  * @param {React.Dispatch<React.SetStateAction<AppStatus>>} setAppState - Function to set the app state.
  * @param {React.Dispatch<React.SetStateAction<string>>} setLoadingMessage - Function to set the loading message.
- * @param {React.Dispatch<React.SetStateAction<string | null>>} setError - Function to set the error.
+ * @param {React.Dispatch<React.SetStateAction<AppError | null>>} setError - Function to set the error.
  * @param {React.Dispatch<React.SetStateAction<BoundingBox[] | null>>} setDetectedObjects - Function to set the detected objects.
  * @returns {{ handleDetectObjects: () => Promise<void> }} - An object with a function to detect objects.
  */
 export const useObjectDetection = (
   animationAssets: AnimationAssets | null,
-  setAppState: React.Dispatch<React.SetStateAction<AppStatus>>,
-  setLoadingMessage: React.Dispatch<React.SetStateAction<string>>,
-  setError: React.Dispatch<React.SetStateAction<string | null>>,
-  setDetectedObjects: React.Dispatch<React.SetStateAction<BoundingBox[] | null>>,
+  setAppState: (payload: AppStatus) => void,
+  setLoadingMessage: (payload: string) => void,
+  setError: (payload: AppError | null) => void,
+  setDetectedObjects: (payload: BoundingBox[] | null) => void,
 ) => {
   const handleDetectObjects = useCallback(async () => {
-    if (!animationAssets) {
-      setError("Cannot detect objects: no animation loaded.");
+    if (!animationAssets?.imageData?.data) {
       return;
     }
-
-    setAppState(AppStatus.Processing);
-    setLoadingMessage('Detecting objects...');
-    setError(null);
-
     try {
-      const { data: base64SpriteSheet, mimeType } = animationAssets.imageData;
-      const detectionPrompt = buildObjectDetectionPrompt();
+      setLoadingMessage('Detecting objects...');
+      setAppState(AppStatus.Processing);
+      setError(null);
 
-      const objects = await detectObjectsInAnimation(
-        base64SpriteSheet,
-        mimeType,
-        detectionPrompt
+      const detected = await detectObjects(
+        animationAssets.imageData.data,
+        animationAssets.imageData.mimeType,
+        OBJECT_DETECTION_PROMPT,
+        (message: string) => {
+          setLoadingMessage(message);
+        }
       );
-
-      setDetectedObjects(objects);
+      setDetectedObjects(detected);
     } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : 'An unknown error occurred during object detection.';
       console.error(err);
-      setError(errorMessage);
+      const appError = createAppError('api', err instanceof Error ? err.message : 'An unknown error occurred.', err instanceof Error ? err : undefined);
+      setError(appError);
     } finally {
       setAppState(AppStatus.Animating);
     }

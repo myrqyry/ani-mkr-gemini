@@ -133,7 +133,7 @@ export const generateAnimationAssets = async (
  * @param {string} detectionPrompt - The prompt for object detection.
  * @returns {Promise<BoundingBox[]>} A promise that resolves to an array of bounding boxes.
  */
-export const detectObjectsInAnimation = async (
+export const detectObjects = async (
   base64SpriteSheet: string,
   mimeType: string,
   detectionPrompt: string,

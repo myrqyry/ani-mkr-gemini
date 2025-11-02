@@ -6,9 +6,12 @@ import rateLimit from 'express-rate-limit';
 import cors from 'cors';
 import DOMPurify from 'isomorphic-dompurify';
 import crypto from 'crypto';
+import helmet from 'helmet';
+import { z } from 'zod';
 import { SERVER_CONFIG } from './src/constants/server.js';
 import { validateEnvironment } from './src/utils/validateEnv.js';
 import { getEnvironmentConfig } from './src/config/environment.js';
+import { GenerateAnimationRequestSchema, GenerateAnimationResponseSchema } from './src/types/schemas.js';
 
 dotenv.config();
 validateEnvironment();
@@ -16,6 +19,17 @@ validateEnvironment();
 const app = express();
 const port = 3001;
 const envConfig = getEnvironmentConfig();
+
+app.use(helmet({
+  contentSecurityPolicy: {
+    directives: {
+      defaultSrc: ["'self'"],
+      styleSrc: ["'self'", "'unsafe-inline'"],
+      imgSrc: ["'self'", "data:", "https:"],
+      connectSrc: ["'self'", "https://generativelanguage.googleapis.com"],
+    },
+  },
+}));
 
 app.use(cors({
   origin: envConfig.origins,
@@ -58,7 +72,6 @@ const validateApiKey = (req, res, next) => {
   const expectedKey = process.env.CLIENT_API_SECRET;
 
   if (!expectedKey) {
-    // Check if the secret is configured, but don't leak this info in the response
     console.error('CLIENT_API_SECRET is not set');
     return res.status(401).json({ error: 'Unauthorized' });
   }
@@ -69,7 +82,6 @@ const validateApiKey = (req, res, next) => {
 
   const providedKey = authHeader.split(' ')[1];
 
-  // Timing-safe comparison to mitigate timing attacks
   const providedKeyBuffer = Buffer.from(providedKey);
   const expectedKeyBuffer = Buffer.from(expectedKey);
 
@@ -86,64 +98,81 @@ const validateApiKey = (req, res, next) => {
 
 app.use('/api/*', validateApiKey);
 
-/**
- * @route POST /api/generate-animation
- * @description Generates an animation based on an image and a prompt.
- * @param {object} req - The request object.
- * @param {object} req.body - The request body.
- * @param {string} req.body.imageData - The base64-encoded image data.
- * @param {string} req.body.prompt - The prompt for the animation.
- * @param {string} req.body.mimeType - The mime type of the image.
- * @param {object} res - The response object.
- */
-const validateGenerateAnimationInput = (body) => {
-  const { imageData, prompt, mimeType, fileUri } = body;
-
-  if (!prompt || typeof prompt !== 'string' || prompt.length > 5000) {
-    throw new Error('Invalid prompt: must be a string under 5000 characters');
+class ValidationError extends Error {
+  constructor(message) {
+    super(message);
+    this.name = 'ValidationError';
   }
+}
 
-  const sanitizedPrompt = DOMPurify.sanitize(prompt, {
-    ALLOWED_TAGS: [],
-    ALLOWED_ATTR: []
-  });
-
-  const maliciousPatterns = [/<script/i, /javascript:/i, /on\w+=/i];
-  if (maliciousPatterns.some(pattern => pattern.test(sanitizedPrompt))) {
-    throw new Error('Potentially malicious content detected');
+class SecurityError extends Error {
+  constructor(message) {
+    super(message);
+    this.name = 'SecurityError';
   }
-
-  if (imageData && typeof imageData !== 'string') {
-    throw new Error('Invalid imageData: must be a base64 string');
-  }
-
-  if (mimeType && !SERVER_CONFIG.SUPPORTED_IMAGE_FORMATS.includes(mimeType)) {
-    throw new Error('Invalid mimeType: unsupported image format');
-  }
-
-  return { imageData, prompt: sanitizedPrompt, mimeType, fileUri };
-};
+}
 
 const handleApiError = (error, operation, res) => {
-  const sanitizedError = error instanceof Error ? error.message : 'Unknown error';
   const errorId = crypto.randomUUID();
+  const timestamp = new Date().toISOString();
 
   console.error(`${operation} error [${errorId}]:`, {
-    timestamp: new Date().toISOString(),
-    error: sanitizedError,
-    stack: process.env.NODE_ENV === 'development' ? error.stack : undefined
+    timestamp,
+    error: error.message,
+    stack: error.stack,
   });
 
-  res.status(500).json({
-    error: `Failed to ${operation.toLowerCase()}`,
+  let clientError = 'An unexpected error occurred';
+  let statusCode = 500;
+
+  if (error instanceof z.ZodError) {
+    clientError = 'Invalid input: ' + error.errors.map(e => e.message).join(', ');
+    statusCode = 400;
+  } else if (error instanceof ValidationError) {
+    clientError = error.message;
+    statusCode = 400;
+  } else if (error instanceof SecurityError) {
+    clientError = 'Request rejected for security reasons';
+    statusCode = 403;
+  }
+
+  res.status(statusCode).json({
+    error: clientError,
     errorId,
-    ...(process.env.NODE_ENV === 'development' && { details: sanitizedError })
+    timestamp,
   });
 };
 
 app.post('/api/generate-animation', apiLimiter, async (req, res) => {
   try {
-    const { imageData, prompt, mimeType, fileUri } = validateGenerateAnimationInput(req.body);
+    const validatedInput = GenerateAnimationRequestSchema.parse(req.body);
+    const { imageData, prompt, mimeType, fileUri } = validatedInput;
+
+    const sanitizedPrompt = DOMPurify.sanitize(prompt.trim(), {
+      ALLOWED_TAGS: [],
+      ALLOWED_ATTR: [],
+      KEEP_CONTENT: false,
+      REMOVE_TAGS: ['script', 'style', 'iframe', 'object', 'embed'],
+    });
+
+    const dangerousPatterns = [
+      /<script[\s\S]*?>[\s\S]*?<\/script>/gi,
+      /javascript\s*:/gi,
+      /on\w+\s*=/gi,
+      /data\s*:/gi,
+      /vbscript\s*:/gi,
+    ];
+
+    if (dangerousPatterns.some(pattern => pattern.test(sanitizedPrompt))) {
+      throw new SecurityError('Potentially malicious content detected');
+    }
+
+    if (imageData) {
+      const imageSizeBytes = (imageData.length * 3) / 4;
+      if (imageSizeBytes > SERVER_CONFIG.MAX_IMAGE_SIZE_BYTES) {
+        throw new ValidationError('Image too large');
+      }
+    }
 
     const model = ai.getGenerativeModel({ model: 'gemini-2.5-flash' });
 
@@ -164,7 +193,7 @@ app.post('/api/generate-animation', apiLimiter, async (req, res) => {
       };
     }
 
-    const result = await model.generateContentStream([prompt, imagePart]);
+    const result = await model.generateContentStream([sanitizedPrompt, imagePart]);
 
     res.setHeader('Content-Type', 'application/json');
 
@@ -186,36 +215,14 @@ app.get('/health', (req, res) => {
   });
 });
 
-app.listen(port, () => {
-  console.log(`Server listening at http://localhost:${port}`);
+const UploadFileRequestSchema = z.object({
+  file: z.string(),
+  mimeType: z.enum(['image/png', 'image/jpeg', 'image/webp']),
 });
 
-const validateUploadFileInput = (body) => {
-  const { file, mimeType } = body;
-
-  if (!file || typeof file !== 'string') {
-    throw new Error('Invalid file: must be a base64 string');
-  }
-
-  if (!mimeType || !SERVER_CONFIG.SUPPORTED_IMAGE_FORMATS.includes(mimeType)) {
-    throw new Error('Invalid mimeType: unsupported image format');
-  }
-
-  return { file, mimeType };
-};
-
-/**
- * @route POST /api/upload-file
- * @description Uploads a file to the Gemini File API.
- * @param {object} req - The request object.
- * @param {object} req.body - The request body.
- * @param {string} req.body.file - The base64-encoded file data.
- * @param {string} req.body.mimeType - The mime type of the file.
- * @param {object} res - The response object.
- */
 app.post('/api/upload-file', apiLimiter, async (req, res) => {
   try {
-    const { file, mimeType } = validateUploadFileInput(req.body);
+    const { file, mimeType } = UploadFileRequestSchema.parse(req.body);
     const result = await ai.uploadFile(file, { mimeType });
     res.json(result);
   } catch (error) {
@@ -223,49 +230,15 @@ app.post('/api/upload-file', apiLimiter, async (req, res) => {
   }
 });
 
-const validatePostProcessInput = (body) => {
-  const { base64SpriteSheet, mimeType, postProcessPrompt, base64StyleImage, styleMimeType, temperature } = body;
+const PostProcessRequestSchema = z.object({
+  base64SpriteSheet: z.string(),
+  mimeType: z.enum(['image/png', 'image/jpeg', 'image/webp']),
+  postProcessPrompt: z.string().min(1).max(5000),
+  base64StyleImage: z.string().optional(),
+  styleMimeType: z.enum(['image/png', 'image/jpeg', 'image/webp']).optional(),
+  temperature: z.number().min(0).max(1).optional(),
+});
 
-  if (!base64SpriteSheet || typeof base64SpriteSheet !== 'string') {
-    throw new Error('Invalid base64SpriteSheet: must be a base64 string');
-  }
-
-  if (!mimeType || !SERVER_CONFIG.SUPPORTED_IMAGE_FORMATS.includes(mimeType)) {
-    throw new Error('Invalid mimeType: unsupported image format');
-  }
-
-  if (!postProcessPrompt || typeof postProcessPrompt !== 'string' || postProcessPrompt.length > 5000) {
-    throw new Error('Invalid postProcessPrompt: must be a string under 5000 characters');
-  }
-
-  if (base64StyleImage && typeof base64StyleImage !== 'string') {
-    throw new Error('Invalid base64StyleImage: must be a base64 string');
-  }
-
-  if (styleMimeType && !SERVER_CONFIG.SUPPORTED_IMAGE_FORMATS.includes(styleMimeType)) {
-    throw new Error('Invalid styleMimeType: unsupported image format');
-  }
-
-  if (temperature && (typeof temperature !== 'number' || temperature < 0 || temperature > 1)) {
-    throw new Error('Invalid temperature: must be a number between 0 and 1');
-  }
-
-  return { base64SpriteSheet, mimeType, postProcessPrompt, base64StyleImage, styleMimeType, temperature };
-};
-
-/**
- * @route POST /api/post-process
- * @description Post-processes an animation.
- * @param {object} req - The request object.
- * @param {object} req.body - The request body.
- * @param {string} req.body.base64SpriteSheet - The base64-encoded sprite sheet.
- * @param {string} req.body.mimeType - The mime type of the sprite sheet.
- * @param {string} req.body.postProcessPrompt - The prompt for post-processing.
- * @param {string} [req.body.base64StyleImage] - The base64-encoded style image.
- * @param {string} [req.body.styleMimeType] - The mime type of the style image.
- * @param {number} [req.body.temperature] - The temperature for the model.
- * @param {object} res - The response object.
- */
 app.post('/api/post-process', apiLimiter, async (req, res) => {
   try {
     const {
@@ -275,7 +248,7 @@ app.post('/api/post-process', apiLimiter, async (req, res) => {
       base64StyleImage,
       styleMimeType,
       temperature,
-    } = validatePostProcessInput(req.body);
+    } = PostProcessRequestSchema.parse(req.body);
 
     const model = ai.getGenerativeModel({ model: 'gemini-2.5-flash-image-preview' });
 
@@ -318,37 +291,15 @@ app.post('/api/post-process', apiLimiter, async (req, res) => {
   }
 });
 
-const validateDetectObjectsInput = (body) => {
-  const { base64SpriteSheet, mimeType, detectionPrompt } = body;
+const DetectObjectsRequestSchema = z.object({
+  base64SpriteSheet: z.string(),
+  mimeType: z.enum(['image/png', 'image/jpeg', 'image/webp']),
+  detectionPrompt: z.string().min(1).max(5000),
+});
 
-  if (!base64SpriteSheet || typeof base64SpriteSheet !== 'string') {
-    throw new Error('Invalid base64SpriteSheet: must be a base64 string');
-  }
-
-  if (!mimeType || !SERVER_CONFIG.SUPPORTED_IMAGE_FORMATS.includes(mimeType)) {
-    throw new Error('Invalid mimeType: unsupported image format');
-  }
-
-  if (!detectionPrompt || typeof detectionPrompt !== 'string' || detectionPrompt.length > 5000) {
-    throw new Error('Invalid detectionPrompt: must be a string under 5000 characters');
-  }
-
-  return { base64SpriteSheet, mimeType, detectionPrompt };
-};
-
-/**
- * @route POST /api/detect-objects
- * @description Detects objects in an animation.
- * @param {object} req - The request object.
- * @param {object} req.body - The request body.
- * @param {string} req.body.base64SpriteSheet - The base64-encoded sprite sheet.
- * @param {string} req.body.mimeType - The mime type of the sprite sheet.
- * @param {string} req.body.detectionPrompt - The prompt for object detection.
- * @param {object} res - The response object.
- */
 app.post('/api/detect-objects', apiLimiter, async (req, res) => {
   try {
-    const { base64SpriteSheet, mimeType, detectionPrompt } = validateDetectObjectsInput(req.body);
+    const { base64SpriteSheet, mimeType, detectionPrompt } = DetectObjectsRequestSchema.parse(req.body);
 
     const model = ai.getGenerativeModel({ model: 'gemini-2.5-flash' });
 
@@ -376,4 +327,8 @@ app.post('/api/detect-objects', apiLimiter, async (req, res) => {
   } catch (error) {
     handleApiError(error, 'detect objects', res);
   }
+});
+
+app.listen(port, () => {
+  console.log(`Server listening at http://localhost:${port}`);
 });
