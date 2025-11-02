@@ -13,7 +13,7 @@ describe('useObjectDetection', () => {
     const setError = vi.fn();
     const setDetectedObjects = vi.fn();
 
-    vi.mocked(geminiService.detectObjectsInAnimation).mockResolvedValue([]);
+    vi.mocked(geminiService).detectObjects.mockResolvedValue([]);
 
     const { result } = renderHook(() => useObjectDetection(
       { imageData: { data: 'mock_image_data', mimeType: 'image/jpeg' }, frameDuration: 100 },

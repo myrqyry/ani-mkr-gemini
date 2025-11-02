@@ -3,10 +3,12 @@ import { renderHook, act } from '@testing-library/react';
 import { usePostProcessing } from './usePostProcessing';
 import * as geminiService from '../services/gemini';
 import * as imageUtils from '../utils/image';
+import * as prompts from '../../prompts';
 import { AppStatus } from '../types/types';
 
 vi.mock('../services/gemini');
 vi.mock('../utils/image');
+vi.mock('../../prompts');
 
 describe('usePostProcessing', () => {
   it('should post-process an animation', async () => {
@@ -15,14 +17,16 @@ describe('usePostProcessing', () => {
     const setError = vi.fn();
     const setAnimationAssets = vi.fn();
 
-    vi.mocked(geminiService.postProcessAnimation).mockResolvedValue({
+    vi.mocked(geminiService).postProcessAnimation.mockResolvedValue({
       imageData: { data: 'mock_image_data', mimeType: 'image/jpeg' },
+      frames: [],
       frameDuration: 100,
     });
     vi.mocked(imageUtils.resizeImage).mockResolvedValue({
       dataUrl: 'data:image/jpeg;base64,mock_image_data',
       mime: 'image/jpeg',
     });
+    vi.mocked(prompts).buildPostProcessPrompt.mockReturnValue('test prompt');
 
     const { result } = renderHook(() => usePostProcessing(
       { imageData: { data: 'mock_image_data', mimeType: 'image/jpeg' }, frameDuration: 100 },
@@ -37,11 +41,11 @@ describe('usePostProcessing', () => {
     ));
 
     await act(async () => {
-      await result.current.handlePostProcess('apply-style');
+      await result.current.handlePostProcess();
     });
 
     expect(setAppState).toHaveBeenCalledWith(AppStatus.Processing);
-    expect(setLoadingMessage).toHaveBeenCalledWith('Applying apply-style effect...');
+    expect(setLoadingMessage).toHaveBeenCalledWith('Post-processing...');
     expect(setError).toHaveBeenCalledWith(null);
     expect(setAnimationAssets).toHaveBeenCalled();
     expect(setAppState).toHaveBeenCalledWith(AppStatus.Animating);
