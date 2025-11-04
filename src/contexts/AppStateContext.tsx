@@ -76,7 +76,7 @@ const AppStateContext = createContext<AppStateContextValue | null>(null);
 const AppActionsContext = createContext<AppActionsContextValue | null>(null);
 
 //action creators
-const createUIActions = (dispatch: React.Dispatch<any>): UIActions => ({
+const createUIActions = (dispatch: React.Dispatch<AppAction>): UIActions => ({
     setAppStatus: (payload) => dispatch({ type: 'SET_APP_STATUS', payload }),
     setLoadingMessage: (payload) => dispatch({ type: 'SET_LOADING_MESSAGE', payload }),
     setError: (payload) => dispatch({ type: 'SET_ERROR', payload }),
