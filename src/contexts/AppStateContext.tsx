@@ -1,6 +1,6 @@
 
 import React, { createContext, useContext, useReducer, useMemo } from 'react';
-import { AppState, AppStatus, AppError, ImageState } from '../types/types';
+import { AppState, AppStatus, AppError, ImageState, AppAction } from '../types/types';
 import { AnimationAssets, BoundingBox } from '../services/gemini';
 import { uiReducer } from '../reducers/uiReducer';
 import { animationReducer } from '../reducers/animationReducer';
