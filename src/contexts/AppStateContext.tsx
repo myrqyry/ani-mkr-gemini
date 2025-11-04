@@ -30,7 +30,7 @@ interface AnimationState {
 
 interface ImageStateSlice {
     imageState: ImageState;
-    selectedAsset: any;
+    selectedAsset: { uri: string } | null;
 }
 
 // Define the shape of the actions
