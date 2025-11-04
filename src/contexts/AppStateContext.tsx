@@ -51,6 +51,7 @@ interface AnimationActions {
     setStoryPrompt: (payload: string) => void;
     setFrameCount: (payload: number) => void;
     setPostProcessStrength: (payload: number) => void;
+    setStyleIntensity: (payload: number) => void;
 }
 
 interface ImageActions {
