@@ -1,7 +1,7 @@
 
 import { AppState, AppAction } from '../types/types';
 
-export const animationReducer = (state: AppState, action: AppAction): AppState => {
+export const animationReducer = (state: Partial<AppState>, action: AppAction): Partial<AppState> => {
   switch (action.type) {
     case 'SET_ANIMATION_ASSETS':
       return { ...state, animationAssets: action.payload };
