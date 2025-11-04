@@ -11,7 +11,7 @@ import { categorizeError, getErrorTitle } from 'src/utils/errorHandler';
 
 interface CaptureViewProps {
   state: AppState;
-  dispatch: React.Dispatch<any>;
+  actions: any;
   handleSuggestionClick: (prompt: string) => void;
   handleCreateAnimation: (isRegeneration?: boolean) => Promise<void>;
   handleCapture: (imageDataUrl: string) => void;
@@ -32,7 +32,7 @@ const CONTAINER_CLASSES = "flex flex-col items-center justify-center w-full max-
 
 const CaptureView: React.FC<CaptureViewProps> = ({
   state,
-  dispatch,
+  actions,
   handleSuggestionClick,
   handleCreateAnimation,
   handleCapture,
@@ -89,7 +89,7 @@ const CaptureView: React.FC<CaptureViewProps> = ({
         {FRAME_COUNTS.map(count => (
           <button
             key={count}
-            onClick={() => dispatch({ type: 'SET_FRAME_COUNT', payload: count })}
+            onClick={() => actions.setFrameCount(count)}
             className={`px-4 py-1 rounded-md text-sm font-medium transition-all focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--color-background)] focus-visible:ring-[var(--color-accent)] ${frameCount === count
                 ? 'bg-[var(--color-accent)] text-white scale-105'
                 : 'bg-[var(--color-button)] text-[var(--color-text-muted)] hover:bg-[var(--color-button-hover)] hover:scale-105'
@@ -115,10 +115,10 @@ const CaptureView: React.FC<CaptureViewProps> = ({
           rows={3}
           className="w-full bg-[var(--color-overlay)] text-[var(--color-text-base)] border border-[var(--color-surface-alt)] rounded-lg px-4 py-3 focus:ring-[var(--color-accent)] focus:border-[var(--color-accent)] transition-all duration-300 text-lg resize-none overflow-y-auto"
           value={storyPrompt}
-          onChange={e => dispatch({ type: 'SET_STORY_PROMPT', payload: e.target.value })}
-          onFocus={() => dispatch({ type: 'SET_IS_PROMPT_FOCUSED', payload: true })}
+          onChange={e => actions.setStoryPrompt(e.target.value)}
+          onFocus={() => actions.setIsPromptFocused(true)}
           onBlur={() => {
-            dispatch({ type: 'SET_IS_PROMPT_FOCUSED', payload: false });
+            actions.setIsPromptFocused(false);
           }}
           aria-label="Animation prompt"
         />
@@ -126,15 +126,15 @@ const CaptureView: React.FC<CaptureViewProps> = ({
       <FileUploadManager
         ref={fileUploadManagerRef}
         imageState={imageState}
-        setImageState={(payload) => dispatch({ type: 'SET_IMAGE_STATE', payload })}
+        setImageState={(payload) => actions.setImageState(payload)}
         styleIntensity={styleIntensity}
-        setStyleIntensity={(payload) => dispatch({ type: 'SET_STYLE_INTENSITY', payload })}
-        setStoryPrompt={(payload) => dispatch({ type: 'SET_STORY_PROMPT', payload })}
-        setAppState={(payload) => dispatch({ type: 'SET_APP_STATUS', payload })}
-        setLoadingMessage={(payload) => dispatch({ type: 'SET_LOADING_MESSAGE', payload })}
-        setError={(payload) => dispatch({ type: 'SET_ERROR', payload })}
+        setStyleIntensity={(payload) => actions.setStyleIntensity(payload)}
+        setStoryPrompt={(payload) => actions.setStoryPrompt(payload)}
+        setAppState={(payload) => actions.setAppStatus(payload)}
+        setLoadingMessage={(payload) => actions.setLoadingMessage(payload)}
+        setError={(payload) => actions.setError(payload)}
       />
-      <AssetManager onAssetSelect={(asset) => dispatch({ type: 'SET_SELECTED_ASSET', payload: asset })} />
+      <AssetManager onAssetSelect={(asset) => actions.setSelectedAsset(asset)} />
       {error && (() => {
         const errorInfo = categorizeError(error);
         const errorTitle = getErrorTitle(errorInfo);
@@ -152,7 +152,7 @@ const CaptureView: React.FC<CaptureViewProps> = ({
                 </details>
               </div>
               <button
-                onClick={() => dispatch({ type: 'SET_ERROR', payload: null })}
+                onClick={() => actions.setError(null)}
                 className="p-1 -mr-2 flex-shrink-0"
                 aria-label="Close error message"
               >
@@ -163,7 +163,7 @@ const CaptureView: React.FC<CaptureViewProps> = ({
               <div className="mt-3 flex gap-2">
                 <button
                   onClick={() => {
-                    dispatch({ type: 'SET_ERROR', payload: null });
+                    actions.setError(null);
                     handleCreateAnimation();
                   }}
                   className="bg-[var(--color-accent)] text-white font-semibold py-2 px-4 rounded hover:bg-[var(--color-accent-hover)] transition-colors transition-transform duration-300 text-sm transform hover:scale-105"
@@ -171,7 +171,7 @@ const CaptureView: React.FC<CaptureViewProps> = ({
                   Try Again
                 </button>
                 <button
-                  onClick={() => dispatch({ type: 'SET_ERROR', payload: null })}
+                  onClick={() => actions.setError(null)}
                   className="bg-[var(--color-surface)] text-[var(--color-text-base)] font-semibold py-2 px-4 rounded hover:bg-[var(--color-surface-hover)] transition-colors transition-transform duration-300 text-sm border border-[var(--color-border)] transform hover:scale-105"
                 >
                   Dismiss
@@ -204,7 +204,7 @@ const CaptureView: React.FC<CaptureViewProps> = ({
           <>
             <CameraView ref={cameraViewRef} onCapture={handleCapture} onError={handleCameraError} />
             <button
-              onClick={() => dispatch({ type: 'SET_IS_CAMERA_OPEN', payload: false })}
+              onClick={() => actions.setIsCameraOpen(false)}
               className="absolute top-4 left-4 bg-black/50 p-2 rounded-full text-white hover:bg-black/75 transition-colors transition-transform duration-200 transform hover:scale-110 focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-black focus-visible:ring-[var(--color-accent)]"
               aria-label="Close camera"
             >
@@ -227,7 +227,7 @@ const CaptureView: React.FC<CaptureViewProps> = ({
             </p>
             <div className="flex flex-col items-center gap-4">
               <button
-                onClick={() => dispatch({ type: 'SET_IS_CAMERA_OPEN', payload: true })}
+                onClick={() => actions.setIsCameraOpen(true)}
                 className="w-52 bg-[var(--color-accent)] text-white font-bold py-3 px-6 rounded-lg hover:bg-[var(--color-accent-hover)] transition-colors transition-transform duration-300 flex items-center justify-center focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-black focus-visible:ring-[var(--color-accent)] transform hover:scale-105"
                 aria-label="Use camera to take a photo"
               >

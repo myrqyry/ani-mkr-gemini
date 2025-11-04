@@ -3,59 +3,31 @@
  * SPDX-License-Identifier: Apache-2.0
 */
 
-import React, { useState, useCallback, useRef, useEffect, useReducer, useMemo } from 'react';
-import { AppState, AppStatus, AppError } from 'src/types/types';
-import { AnimationAssets, BoundingBox } from 'src/services/gemini';
-import { promptSuggestions } from 'prompts';
+import React, { useState, useCallback, useRef, useEffect, useMemo } from 'react';
+import { AppStatus, AppError } from 'src/types/types';
+import { AnimationAssets } from 'src/services/gemini';
 import CameraView, { CameraViewHandles } from 'src/components/CameraView';
-import AnimationPlayer from 'src/components/AnimationPlayer';
 import ExportModal from 'src/components/ExportModal';
-import LoadingOverlay from 'src/components/LoadingOverlay';
-import { UploadIcon, SwitchCameraIcon, XCircleIcon, CameraIcon, LinkIcon } from 'src/components/icons';
-import AniMkrGeminiButton from 'src/components/AniMkrGeminiButton';
 import { useThemeManager } from 'src/hooks/useThemeManager';
 import ThemeSwitcher from 'src/components/features/theme/ThemeSwitcher';
 import ThemeCustomizer from 'src/components/features/theme/ThemeCustomizer';
-import FileUploadManager, { FileUploadManagerHandles } from 'src/components/features/uploader/FileUploadManager';
-import AssetManager from 'src/components/features/uploader/AssetManager';
+import { FileUploadManagerHandles } from 'src/components/features/uploader/FileUploadManager';
 import ErrorBoundary from 'src/components/ErrorBoundary';
 import { useAnimationCreator } from 'src/hooks/useAnimationCreator';
 import { useObjectDetection } from 'src/hooks/useObjectDetection';
 import { usePostProcessing } from 'src/hooks/usePostProcessing';
-import { appReducer, initialState } from 'src/reducers/appReducer';
-import { categorizeError, getErrorTitle } from 'src/utils/errorHandler';
+import { useTypingAnimation } from 'src/hooks/useTypingAnimation';
 import { debounce } from 'lodash';
-import {
-  FRAME_COUNTS,
-  TYPING_ANIMATION_TEXT,
-  TYPING_ANIMATION_SPEED,
-  TYPING_ANIMATION_DELETING_SPEED,
-  TYPING_ANIMATION_PAUSE_MS,
-  TYPING_ANIMATION_SHORT_PAUSE_MS,
-} from 'src/constants/app';
 
 import CaptureView from 'src/components/views/CaptureView';
 import AnimationView from 'src/components/views/AnimationView';
 import ErrorView from 'src/components/views/ErrorView';
 import LoadingView from 'src/components/views/LoadingView';
+import { useUIState, useAnimationState, useImageState } from 'src/contexts/AppStateContext';
 
 // --- FEATURE FLAGS ---
-// Set to `true` to make uploading or capturing an image mandatory to create an animation.
-// Set to `false` to allow creating animations from only a text prompt.
 const REQUIRE_IMAGE_FOR_ANIMATION = false;
-
-// Set to `true` to allow selecting multiple emoji suggestions to combine prompts.
-// Set to `false` to only allow one emoji suggestion to be active at a time.
 const ALLOW_MULTIPLE_EMOJI_SELECTION = true;
-
-interface TypingAnimationState {
-  id: number;
-  fullText: string;
-  isDeleting: boolean;
-  text: string;
-  timeoutId: number | null;
-  speed: number;
-}
 
 const createAppError = (type: AppError['type'], message: string, originalError?: Error): AppError => ({
   type,
@@ -80,50 +52,46 @@ const App: React.FC = () => {
     handleThemeExport,
     handleThemeImport,
   } = useThemeManager();
-  const [state, dispatch] = useReducer(appReducer, initialState);
 
-  const stableCallbacks = useMemo(() => ({
-    setAppStatus: (payload: AppStatus) => dispatch({ type: 'SET_APP_STATUS', payload }),
-    setLoadingMessage: (payload: string) => dispatch({ type: 'SET_LOADING_MESSAGE', payload }),
-    setError: (payload: AppError | null) => dispatch({ type: 'SET_ERROR', payload }),
-    setAnimationAssets: (payload: AnimationAssets | null) => dispatch({ type: 'SET_ANIMATION_ASSETS', payload }),
-    setStoryPrompt: (payload: string) => dispatch({ type: 'SET_STORY_PROMPT', payload }),
-  }), []);
+  const { ui, actions: uiActions } = useUIState();
+  const { animation, actions: animationActions } = useAnimationState();
+  const { image, actions: imageActions } = useImageState();
 
   const {
     appStatus,
-    imageState,
-    styleIntensity,
-    animationAssets,
-    detectedObjects,
-    loadingMessage,
-    error,
-    storyPrompt,
-    typedPlaceholder,
     isPromptFocused,
-    frameCount,
-    postProcessStrength,
-    hasMultipleCameras,
     isCameraOpen,
     isExportModalOpen,
-  } = state;
+    hasMultipleCameras,
+  } = ui;
+
+  const {
+    animationAssets,
+    storyPrompt,
+    frameCount,
+    postProcessStrength,
+    styleIntensity,
+  } = animation;
+
+  const { imageState, selectedAsset } = image;
+
+  const typedPlaceholder = useTypingAnimation(storyPrompt, isPromptFocused);
 
   const cameraViewRef = useRef<CameraViewHandles>(null);
   const storyPromptTextareaRef = useRef<HTMLTextAreaElement>(null);
   const fileUploadManagerRef = useRef<FileUploadManagerHandles>(null);
   const shouldAnimateAfterCapture = useRef<boolean>(false);
-  const typingAnimationRef = useRef<TypingAnimationState | null>(null);
 
   const { handleCreateAnimation } = useAnimationCreator(
     imageState,
     storyPrompt,
     frameCount,
-    stableCallbacks.setAppStatus,
-    stableCallbacks.setLoadingMessage,
-    stableCallbacks.setError,
-    stableCallbacks.setAnimationAssets,
-    stableCallbacks.setStoryPrompt,
-    state.selectedAsset,
+    uiActions.setAppStatus,
+    uiActions.setLoadingMessage,
+    uiActions.setError,
+    animationActions.setAnimationAssets,
+    animationActions.setStoryPrompt,
+    selectedAsset,
   );
 
   const animationCallbackRef = useRef(handleCreateAnimation);
@@ -141,16 +109,12 @@ const App: React.FC = () => {
     []
   );
 
-  const handleAssetSelect = (asset: any) => {
-    dispatch({ type: 'SET_SELECTED_ASSET', payload: asset });
-  };
-
   const { handleDetectObjects } = useObjectDetection(
     animationAssets,
-    stableCallbacks.setAppStatus,
-    stableCallbacks.setLoadingMessage,
-    stableCallbacks.setError,
-    (payload) => dispatch({ type: 'SET_DETECTED_OBJECTS', payload }),
+    uiActions.setAppStatus,
+    uiActions.setLoadingMessage,
+    uiActions.setError,
+    animationActions.setDetectedObjects,
   );
 
   const { handlePostProcess } = usePostProcessing(
@@ -159,12 +123,11 @@ const App: React.FC = () => {
     frameCount,
     styleIntensity,
     postProcessStrength,
-    stableCallbacks.setAppStatus,
-    stableCallbacks.setLoadingMessage,
-    stableCallbacks.setError,
-    stableCallbacks.setAnimationAssets,
+    uiActions.setAppStatus,
+    uiActions.setLoadingMessage,
+    uiActions.setError,
+    animationActions.setAnimationAssets,
   );
-
 
   useEffect(() => {
     const checkForMultipleCameras = async () => {
@@ -172,102 +135,30 @@ const App: React.FC = () => {
         try {
           const devices = await navigator.mediaDevices.enumerateDevices();
           const videoInputCount = devices.filter(d => d.kind === 'videoinput').length;
-          dispatch({ type: 'SET_HAS_MULTIPLE_CAMERAS', payload: videoInputCount > 1 });
+          uiActions.setHasMultipleCameras(videoInputCount > 1);
         } catch (err) {
           console.error("Failed to enumerate media devices:", err);
         }
       }
     };
     checkForMultipleCameras();
-  }, []);
-  
-  const deferredTypingUpdate = useMemo(() =>
-    debounce((text: string) => {
-      requestIdleCallback(() => {
-        dispatch({ type: 'SET_TYPED_PLACEHOLDER', payload: text });
-      });
-    }, 16),
-  []);
+  }, [uiActions]);
 
-  useEffect(() => {
-    if (storyPrompt.trim() || isPromptFocused) {
-      dispatch({ type: 'SET_TYPED_PLACEHOLDER', payload: '' });
-      return;
-    }
-
-    const animationId = Date.now();
-    typingAnimationRef.current = {
-      id: animationId,
-      fullText: TYPING_ANIMATION_TEXT,
-      isDeleting: false,
-      text: '',
-      timeoutId: null,
-      speed: TYPING_ANIMATION_SPEED,
-    };
-
-    const tick = () => {
-      const state = typingAnimationRef.current;
-      if (!state || state.id !== animationId) return;
-
-      let { fullText, isDeleting, text } = state;
-
-      if (isDeleting) {
-        text = fullText.substring(0, text.length - 1);
-      } else {
-        text = fullText.substring(0, text.length + 1);
-      }
-
-      deferredTypingUpdate(text);
-
-      let newSpeed = isDeleting ? TYPING_ANIMATION_DELETING_SPEED : TYPING_ANIMATION_SPEED;
-
-      if (!isDeleting && text === fullText) {
-        newSpeed = TYPING_ANIMATION_PAUSE_MS;
-        state.isDeleting = true;
-      } else if (isDeleting && text === '') {
-        state.isDeleting = false;
-        newSpeed = TYPING_ANIMATION_SHORT_PAUSE_MS;
-      }
-
-      state.text = text;
-      if (typingAnimationRef.current) {
-        typingAnimationRef.current.timeoutId = setTimeout(tick, newSpeed);
-      }
-    };
-
-    const startTimeoutId = setTimeout(tick, TYPING_ANIMATION_SPEED);
-    if (typingAnimationRef.current) {
-      typingAnimationRef.current.timeoutId = startTimeoutId;
-    }
-
-    return () => {
-      const state = typingAnimationRef.current;
-      if (state && state.id === animationId) {
-        if (state.timeoutId) {
-          clearTimeout(state.timeoutId);
-        }
-        typingAnimationRef.current = null;
-      }
-    };
-  }, [storyPrompt, isPromptFocused, deferredTypingUpdate]);
-  
   useEffect(() => {
     if (imageState.original && shouldAnimateAfterCapture.current) {
         shouldAnimateAfterCapture.current = false;
         handleCreateAnimation();
     }
   }, [imageState.original, handleCreateAnimation]);
-  
+
   useEffect(() => {
     if (storyPromptTextareaRef.current) {
       const textarea = storyPromptTextareaRef.current;
       if (isPromptFocused) {
-        // Expand on focus
         textarea.style.height = 'auto';
         textarea.style.height = `${textarea.scrollHeight}px`;
       } else {
-        // Shrink on blur
-        textarea.style.height = ''; // Reverts to CSS-defined height
+        textarea.style.height = '';
       }
     }
   }, [storyPrompt, isPromptFocused]);
@@ -278,8 +169,8 @@ const App: React.FC = () => {
         throw createAppError('validation', 'Invalid image data received from camera');
       }
 
-      dispatch({ type: 'SET_IMAGE_STATE', payload: { original: imageDataUrl } });
-      dispatch({ type: 'SET_IS_CAMERA_OPEN', payload: false });
+      imageActions.setImageState({ original: imageDataUrl });
+      uiActions.setIsCameraOpen(false);
 
       await new Promise(resolve => requestAnimationFrame(resolve));
 
@@ -289,15 +180,15 @@ const App: React.FC = () => {
           await handleCreateAnimation();
         } catch (animationError) {
           const appError = createAppError('api', 'Failed to create animation from captured image', animationError as Error);
-          dispatch({ type: 'SET_ERROR', payload: appError });
+          uiActions.setError(appError);
         }
       }
     } catch (error) {
       console.error('Error in handleCapture:', error);
       const appError = error instanceof Error ? createAppError('unknown', error.message, error) : createAppError('unknown', 'Failed to process captured image');
-      dispatch({ type: 'SET_ERROR', payload: appError });
+      uiActions.setError(appError);
     }
-  }, [handleCreateAnimation]);
+  }, [handleCreateAnimation, imageActions, uiActions]);
 
   const handleFlipCamera = () => {
     cameraViewRef.current?.flipCamera();
@@ -305,22 +196,22 @@ const App: React.FC = () => {
 
   const handleCameraError = useCallback((message: string) => {
     const appError = createAppError('permission', message);
-    dispatch({ type: 'SET_ERROR', payload: appError });
-    dispatch({ type: 'SET_APP_STATUS', payload: AppStatus.Error });
-  }, []);
+    uiActions.setError(appError);
+    uiActions.setAppStatus(AppStatus.Error);
+  }, [uiActions]);
 
   const handleClearImage = () => {
-    dispatch({ type: 'SET_IMAGE_STATE', payload: { original: null } });
-    dispatch({ type: 'SET_IS_CAMERA_OPEN', payload: false });
+    imageActions.setImageState({ original: null });
+    uiActions.setIsCameraOpen(false);
   };
-  
+
   const handleBack = () => {
-    dispatch({ type: 'SET_APP_STATUS', payload: AppStatus.Capturing });
-    dispatch({ type: 'SET_ANIMATION_ASSETS', payload: null });
-    dispatch({ type: 'SET_ERROR', payload: null });
-    dispatch({ type: 'SET_DETECTED_OBJECTS', payload: null });
+    uiActions.setAppStatus(AppStatus.Capturing);
+    animationActions.setAnimationAssets(null);
+    uiActions.setError(null);
+    animationActions.setDetectedObjects(null);
   };
-  
+
   const handleSuggestionClick = (prompt: string) => {
     if (ALLOW_MULTIPLE_EMOJI_SELECTION) {
       const prompts = storyPrompt.split(', ').filter(p => p.trim() !== '');
@@ -330,15 +221,12 @@ const App: React.FC = () => {
       } else {
         prompts.push(prompt);
       }
-      dispatch({ type: 'SET_STORY_PROMPT', payload: prompts.join(', ') });
+      animationActions.setStoryPrompt(prompts.join(', '));
     } else {
-      dispatch({
-        type: 'SET_STORY_PROMPT',
-        payload: storyPrompt === prompt ? '' : prompt,
-      });
+      animationActions.setStoryPrompt(storyPrompt === prompt ? '' : prompt);
     }
   };
-  
+
   const handlePrimaryAction = useCallback(() => {
     if (isCameraOpen) {
         if (cameraViewRef.current) {
@@ -349,16 +237,17 @@ const App: React.FC = () => {
         debouncedCreateAnimation();
     }
   }, [isCameraOpen, debouncedCreateAnimation]);
-  
+
   const isAniMkrGeminiDisabled = !isCameraOpen && !imageState.original && (REQUIRE_IMAGE_FOR_ANIMATION || !storyPrompt.trim());
 
   const renderContent = useMemo(() => {
+    const state = { ...ui, ...animation, ...image, typedPlaceholder };
     switch (appStatus) {
       case AppStatus.Capturing:
         return (
           <CaptureView
             state={state}
-            dispatch={dispatch}
+            actions={{ ...uiActions, ...animationActions, ...imageActions }}
             handleSuggestionClick={handleSuggestionClick}
             handleCreateAnimation={handleCreateAnimation}
             handleCapture={handleCapture}
@@ -381,11 +270,11 @@ const App: React.FC = () => {
         return (
           <AnimationView
             state={state}
+            actions={{ ...uiActions, ...animationActions, ...imageActions }}
             handleCreateAnimation={handleCreateAnimation}
             handleBack={handleBack}
             handlePostProcess={handlePostProcess}
             handleDetectObjects={handleDetectObjects}
-            dispatch={dispatch}
           />
         );
       case AppStatus.Error:
@@ -397,9 +286,14 @@ const App: React.FC = () => {
         );
     }
   }, [
-    state,
     appStatus,
-    dispatch,
+    ui,
+    animation,
+    image,
+    typedPlaceholder,
+    uiActions,
+    animationActions,
+    imageActions,
     handleSuggestionClick,
     handleCreateAnimation,
     handleCapture,
@@ -446,7 +340,7 @@ const App: React.FC = () => {
             frames={animationAssets.frames}
             width={512}
             height={512}
-            onClose={() => dispatch({ type: 'SET_IS_EXPORT_MODAL_OPEN', payload: false })}
+            onClose={() => uiActions.setIsExportModalOpen(false)}
           />
         </div>
       )}

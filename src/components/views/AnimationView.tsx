@@ -4,20 +4,20 @@ import AnimationPlayer from 'src/components/AnimationPlayer';
 
 interface AnimationViewProps {
   state: AppState;
+  actions: any;
   handleCreateAnimation: (isRegeneration?: boolean) => Promise<void>;
   handleBack: () => void;
   handlePostProcess: () => Promise<void>;
   handleDetectObjects: () => Promise<void>;
-  dispatch: React.Dispatch<any>;
 }
 
 const AnimationView: React.FC<AnimationViewProps> = ({
   state,
+  actions,
   handleCreateAnimation,
   handleBack,
   handlePostProcess,
   handleDetectObjects,
-  dispatch,
 }) => {
   const {
     animationAssets,
@@ -34,15 +34,15 @@ const AnimationView: React.FC<AnimationViewProps> = ({
       frameCount={frameCount}
       onRegenerate={() => handleCreateAnimation(true)}
       onBack={handleBack}
-      onExport={() => dispatch({ type: 'SET_IS_EXPORT_MODAL_OPEN', payload: true })}
+      onExport={() => actions.setIsExportModalOpen(true)}
       onPostProcess={handlePostProcess}
       onDetectObjects={handleDetectObjects}
       detectedObjects={detectedObjects}
       error={error}
-      clearError={() => dispatch({ type: 'SET_ERROR', payload: null })}
+      clearError={() => actions.setError(null)}
       styleImage={imageState.style}
       postProcessStrength={postProcessStrength}
-      onPostProcessStrengthChange={(payload) => dispatch({ type: 'SET_POST_PROCESS_STRENGTH', payload })}
+      onPostProcessStrengthChange={(payload) => actions.setPostProcessStrength(payload)}
     />
   ) : null;
 };

@@ -2,6 +2,7 @@ import React from 'react';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { describe, it, expect, vi } from 'vitest';
 import App from '@/App';
+import { AppStateProvider } from '@/src/contexts/AppStateContext';
 import { promptSuggestions } from 'prompts';
 import { TYPING_ANIMATION_TEXT } from 'src/constants/app';
 
@@ -18,9 +19,17 @@ Object.defineProperty(navigator, 'mediaDevices', {
   writable: true,
 });
 
+const renderApp = () => {
+  return render(
+    <AppStateProvider>
+      <App />
+    </AppStateProvider>
+  );
+};
+
 describe('App component', () => {
   it('should handle multiple emoji selections correctly', async () => {
-    render(<App />);
+    renderApp();
 
     const storyPromptTextarea = screen.getByLabelText('Animation prompt') as HTMLTextAreaElement;
 
@@ -49,7 +58,7 @@ describe('App component', () => {
   });
 
   it('should not restart typing animation on rapid focus/blur when there is content', async () => {
-    render(<App />);
+    renderApp();
 
     const storyPromptTextarea = screen.getByRole('textbox', { name: 'Animation prompt' }) as HTMLTextAreaElement;
 
