@@ -1,7 +1,7 @@
 
 import { AppState, AppAction, AppStatus } from '../types/types';
 
-export const uiReducer = (state: AppState, action: AppAction): AppState => {
+export const uiReducer = (state: Partial<AppState>, action: AppAction): Partial<AppState> => {
   switch (action.type) {
     case 'SET_APP_STATUS':
       return { ...state, appStatus: action.payload };
