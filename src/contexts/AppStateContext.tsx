@@ -101,9 +101,9 @@ const createImageActions = (dispatch: React.Dispatch<any>): ImageActions => ({
 
 // Create the provider
 export const AppStateProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-    const [uiState, uiDispatch] = useReducer(uiReducer, initialState);
-    const [animationState, animationDispatch] = useReducer(animationReducer, initialState);
-    const [imageState, imageDispatch] = useReducer(imageReducer, initialState);
+    const [uiState, uiDispatch] = useReducer(uiReducer, initialState.ui);
+    const [animationState, animationDispatch] = useReducer(animationReducer, initialState.animation);
+    const [imageState, imageDispatch] = useReducer(imageReducer, initialState.image);
 
     const stateValue = useMemo(() => ({
         ui: {
