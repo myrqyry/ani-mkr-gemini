@@ -87,12 +87,13 @@ const createUIActions = (dispatch: React.Dispatch<any>): UIActions => ({
     setTypedPlaceholder: (payload) => dispatch({ type: 'SET_TYPED_PLACEHOLDER', payload }),
 });
 
-const createAnimationActions = (dispatch: React.Dispatch<any>): AnimationActions => ({
+const createAnimationActions = (dispatch: React.Dispatch<AppAction>): AnimationActions => ({
     setAnimationAssets: (payload) => dispatch({ type: 'SET_ANIMATION_ASSETS', payload }),
     setDetectedObjects: (payload) => dispatch({ type: 'SET_DETECTED_OBJECTS', payload }),
     setStoryPrompt: (payload) => dispatch({ type: 'SET_STORY_PROMPT', payload }),
     setFrameCount: (payload) => dispatch({ type: 'SET_FRAME_COUNT', payload }),
     setPostProcessStrength: (payload) => dispatch({ type: 'SET_POST_PROCESS_STRENGTH', payload }),
+    setStyleIntensity: (payload) => dispatch({ type: 'SET_STYLE_INTENSITY', payload }),
 });
 
 const createImageActions = (dispatch: React.Dispatch<any>): ImageActions => ({
