@@ -11,7 +11,7 @@ import { categorizeError, getErrorTitle } from 'src/utils/errorHandler';
 
 interface CaptureViewProps {
   state: AppState;
-  actions: any;
+  actions: UIActions & AnimationActions & ImageActions;
   handleSuggestionClick: (prompt: string) => void;
   handleCreateAnimation: (isRegeneration?: boolean) => Promise<void>;
   handleCapture: (imageDataUrl: string) => void;
