@@ -96,7 +96,7 @@ const createAnimationActions = (dispatch: React.Dispatch<AppAction>): AnimationA
     setStyleIntensity: (payload) => dispatch({ type: 'SET_STYLE_INTENSITY', payload }),
 });
 
-const createImageActions = (dispatch: React.Dispatch<any>): ImageActions => ({
+const createImageActions = (dispatch: React.Dispatch<AppAction>): ImageActions => ({
     setImageState: (payload) => dispatch({ type: 'SET_IMAGE_STATE', payload }),
     setSelectedAsset: (payload) => dispatch({ type: 'SET_SELECTED_ASSET', payload }),
 });
