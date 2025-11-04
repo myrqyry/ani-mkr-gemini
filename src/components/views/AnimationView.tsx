@@ -4,7 +4,7 @@ import AnimationPlayer from 'src/components/AnimationPlayer';
 
 interface AnimationViewProps {
   state: AppState;
-  actions: any;
+  actions: UIActions & AnimationActions & ImageActions;
   handleCreateAnimation: (isRegeneration?: boolean) => Promise<void>;
   handleBack: () => void;
   handlePostProcess: () => Promise<void>;
