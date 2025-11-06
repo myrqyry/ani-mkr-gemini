@@ -1,7 +1,7 @@
 import { useCallback } from 'react';
 import { AppStatus, AnimationAssets, BoundingBox, AppError } from '../types/types';
 import { detectObjects } from '../services/gemini';
-import { OBJECT_DETECTION_PROMPT } from '../../prompts';
+import { OBJECT_DETECTION_PROMPT } from '../services/prompts';
 
 const createAppError = (type: AppError['type'], message: string, originalError?: Error): AppError => ({
   type,
