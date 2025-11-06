@@ -10,7 +10,7 @@ const AppFooter: React.FC = () => {
     } = useThemeManager();
     return (
         <footer className="w-full shrink-0 p-4 text-center text-[var(--color-text-subtle)] text-xs flex justify-center items-center gap-x-6">
-            <span>Built with Gemini 1.5 Flash Image Preview | Created by <a href="http://x.com/pitaru" target="_blank" rel="noopener noreferrer" className="underline hover:text-[var(--color-accent)]">@pitaru</a></span>
+            <span>Built with Gemini 1.5 Flash Image Preview | Created by <a href="https://x.com/pitaru" target="_blank" rel="noopener noreferrer" className="underline hover:text-[var(--color-accent)]">@pitaru</a></span>
             <ThemeSwitcher
                 currentTheme={currentTheme}
                 onThemeChange={setCurrentTheme}
