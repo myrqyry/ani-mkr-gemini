@@ -1,29 +1,20 @@
-/**
- * @license
- * SPDX-License-Identifier: Apache-2.0
-*/
-
-import React, { useState, useCallback, useRef, useEffect, useMemo } from 'react';
-import { AppStatus, AppError } from 'src/types/types';
-import { AnimationAssets } from 'src/services/gemini';
-import CameraView, { CameraViewHandles } from 'src/components/CameraView';
-import ExportModal from 'src/components/ExportModal';
-import { useThemeManager } from 'src/hooks/useThemeManager';
-import ThemeSwitcher from 'src/components/features/theme/ThemeSwitcher';
-import ThemeCustomizer from 'src/components/features/theme/ThemeCustomizer';
-import { FileUploadManagerHandles } from 'src/components/features/uploader/FileUploadManager';
-import ErrorBoundary from 'src/components/ErrorBoundary';
-import { useAnimationCreator } from 'src/hooks/useAnimationCreator';
-import { useObjectDetection } from 'src/hooks/useObjectDetection';
-import { usePostProcessing } from 'src/hooks/usePostProcessing';
-import { useTypingAnimation } from 'src/hooks/useTypingAnimation';
+import React, { useCallback, useRef, useEffect, useMemo, lazy, Suspense } from 'react';
+import { AppStatus, AppError } from '../../types/types';
+import { CameraViewHandles } from '../CameraView';
+import { FileUploadManagerHandles } from '../features/uploader/FileUploadManager';
+import { useAnimationCreator } from '../../hooks/useAnimationCreator';
+import { useObjectDetection } from '../../hooks/useObjectDetection';
+import { usePostProcessing } from '../../hooks/usePostProcessing';
+import { useTypingAnimation } from '../../hooks/useTypingAnimation';
+import { useValidatedCapture } from '../../hooks/useValidatedCapture';
 import { debounce } from 'lodash';
+import { useUIState, useAnimationState, useImageState } from '../../contexts/AppStateContext';
+import ViewSkeleton from '../common/ViewSkeleton';
 
-import CaptureView from 'src/components/views/CaptureView';
-import AnimationView from 'src/components/views/AnimationView';
-import ErrorView from 'src/components/views/ErrorView';
-import LoadingView from 'src/components/views/LoadingView';
-import { useUIState, useAnimationState, useImageState } from 'src/contexts/AppStateContext';
+const CaptureView = lazy(() => import('../views/CaptureView'));
+const AnimationView = lazy(() => import('../views/AnimationView'));
+const ErrorView = lazy(() => import('../views/ErrorView'));
+const LoadingView = lazy(() => import('../views/LoadingView'));
 
 // --- FEATURE FLAGS ---
 const REQUIRE_IMAGE_FOR_ANIMATION = false;
@@ -36,23 +27,8 @@ const createAppError = (type: AppError['type'], message: string, originalError?:
   originalError,
 });
 
-/**
- * The main App component.
- * @returns {React.ReactElement} The rendered component.
- */
-const App: React.FC = () => {
-  const {
-    currentTheme,
-    customThemes,
-    isCustomizerOpen,
-    setCurrentTheme,
-    setIsCustomizerOpen,
-    handleColorChange,
-    handleThemeReset,
-    handleThemeExport,
-    handleThemeImport,
-  } = useThemeManager();
 
+const AppRouter: React.FC = () => {
   const { ui, actions: uiActions } = useUIState();
   const { animation, actions: animationActions } = useAnimationState();
   const { image, actions: imageActions } = useImageState();
@@ -61,7 +37,6 @@ const App: React.FC = () => {
     appStatus,
     isPromptFocused,
     isCameraOpen,
-    isExportModalOpen,
     hasMultipleCameras,
   } = ui;
 
@@ -129,6 +104,25 @@ const App: React.FC = () => {
     animationActions.setAnimationAssets,
   );
 
+  const processImageCapture = async (imageDataUrl: string) => {
+    imageActions.setImageState({ original: imageDataUrl });
+    uiActions.setIsCameraOpen(false);
+
+    await new Promise(resolve => requestAnimationFrame(resolve));
+
+    if (shouldAnimateAfterCapture.current) {
+        shouldAnimateAfterCapture.current = false;
+        try {
+            await handleCreateAnimation();
+        } catch (animationError) {
+            const appError = createAppError('api', 'Failed to create animation from captured image', animationError as Error);
+            uiActions.setError(appError);
+        }
+    }
+  };
+
+  const { handleCapture } = useValidatedCapture(processImageCapture);
+
   useEffect(() => {
     const checkForMultipleCameras = async () => {
       if (navigator.mediaDevices?.enumerateDevices) {
@@ -162,33 +156,6 @@ const App: React.FC = () => {
       }
     }
   }, [storyPrompt, isPromptFocused]);
-
-  const handleCapture = useCallback(async (imageDataUrl: string) => {
-    try {
-      if (!imageDataUrl || !imageDataUrl.startsWith('data:image/')) {
-        throw createAppError('validation', 'Invalid image data received from camera');
-      }
-
-      imageActions.setImageState({ original: imageDataUrl });
-      uiActions.setIsCameraOpen(false);
-
-      await new Promise(resolve => requestAnimationFrame(resolve));
-
-      if (shouldAnimateAfterCapture.current) {
-        shouldAnimateAfterCapture.current = false;
-        try {
-          await handleCreateAnimation();
-        } catch (animationError) {
-          const appError = createAppError('api', 'Failed to create animation from captured image', animationError as Error);
-          uiActions.setError(appError);
-        }
-      }
-    } catch (error) {
-      console.error('Error in handleCapture:', error);
-      const appError = error instanceof Error ? createAppError('unknown', error.message, error) : createAppError('unknown', 'Failed to process captured image');
-      uiActions.setError(appError);
-    }
-  }, [handleCreateAnimation, imageActions, uiActions]);
 
   const handleFlipCamera = () => {
     cameraViewRef.current?.flipCamera();
@@ -240,8 +207,9 @@ const App: React.FC = () => {
 
   const isAniMkrGeminiDisabled = !isCameraOpen && !imageState.original && (REQUIRE_IMAGE_FOR_ANIMATION || !storyPrompt.trim());
 
-  const renderContent = useMemo(() => {
-    const state = { ...ui, ...animation, ...image, typedPlaceholder };
+  const state = { ...ui, ...animation, ...image, typedPlaceholder };
+
+  const AppContent = () => {
     switch (appStatus) {
       case AppStatus.Capturing:
         return (
@@ -284,68 +252,15 @@ const App: React.FC = () => {
             handleBack={handleBack}
           />
         );
+      default:
+          return null;
     }
-  }, [
-    appStatus,
-    ui,
-    animation,
-    image,
-    typedPlaceholder,
-    uiActions,
-    animationActions,
-    imageActions,
-    handleSuggestionClick,
-    handleCreateAnimation,
-    handleCapture,
-    handleClearImage,
-    handleFlipCamera,
-    isAniMkrGeminiDisabled,
-    handlePrimaryAction,
-    hasMultipleCameras,
-    isCameraOpen,
-    handleBack,
-    handlePostProcess,
-    handleDetectObjects,
-  ]);
+  }
 
   return (
-    <div className="h-dvh bg-[var(--color-background)] text-[var(--color-text-base)] flex flex-col items-center p-4 overflow-y-auto animate-fade-in">
-      <ErrorBoundary>
-        <div className="w-full grow flex items-center [@media(max-height:750px)]:items-start justify-center animate-fade-in-up">
-          {renderContent}
-        </div>
-      </ErrorBoundary>
-      <footer className="w-full shrink-0 p-4 text-center text-[var(--color-text-subtle)] text-xs flex justify-center items-center gap-x-6">
-        <span>Built with Gemini 2.5 Flash Image Preview | Created by <a href="http://x.com/pitaru" target="_blank" rel="noopener noreferrer" className="underline hover:text-[var(--color-accent)]">@pitaru</a></span>
-        <ThemeSwitcher 
-            currentTheme={currentTheme} 
-            onThemeChange={setCurrentTheme} 
-            onCustomize={() => setIsCustomizerOpen(true)}
-        />
-      </footer>
-       {isCustomizerOpen && (
-            <ThemeCustomizer
-                theme={currentTheme}
-                customColors={customThemes[currentTheme] || {}}
-                onColorChange={handleColorChange}
-                onReset={handleThemeReset}
-                onImport={handleThemeImport}
-                onExport={handleThemeExport}
-                onClose={() => setIsCustomizerOpen(false)}
-            />
-        )}
-      {isExportModalOpen && animationAssets && (
-        <div className="animate-scale-in">
-          <ExportModal
-            frames={animationAssets.frames}
-            width={512}
-            height={512}
-            onClose={() => uiActions.setIsExportModalOpen(false)}
-          />
-        </div>
-      )}
-    </div>
+    <Suspense fallback={<ViewSkeleton />}>
+      <AppContent />
+    </Suspense>
   );
 };
-
-export default App;
+export default AppRouter;

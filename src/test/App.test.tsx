@@ -1,10 +1,10 @@
 import React from 'react';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { describe, it, expect, vi } from 'vitest';
-import App from '@/App';
-import { AppStateProvider } from '@/src/contexts/AppStateContext';
-import { promptSuggestions } from 'prompts';
-import { TYPING_ANIMATION_TEXT } from 'src/constants/app';
+import AppRouter from '../components/router/AppRouter';
+import { AppStateProvider } from '../contexts/AppStateContext';
+import { promptSuggestions } from '../services/prompts';
+import { TYPING_ANIMATION_TEXT } from '../constants/app';
 
 // Mocking navigator.mediaDevices
 Object.defineProperty(navigator, 'mediaDevices', {
@@ -22,7 +22,7 @@ Object.defineProperty(navigator, 'mediaDevices', {
 const renderApp = () => {
   return render(
     <AppStateProvider>
-      <App />
+      <AppRouter />
     </AppStateProvider>
   );
 };

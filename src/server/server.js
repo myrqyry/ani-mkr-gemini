@@ -1,17 +1,17 @@
 
 import express from 'express';
 import dotenv from 'dotenv';
-import { GoogleGenerativeAI } from '@google/generative-ai';
+import { GoogleGenAI } from '@google/genai';
 import rateLimit from 'express-rate-limit';
 import cors from 'cors';
 import DOMPurify from 'isomorphic-dompurify';
 import crypto from 'crypto';
 import helmet from 'helmet';
 import { z } from 'zod';
-import { SERVER_CONFIG } from './src/constants/server.js';
-import { validateEnvironment } from './src/utils/validateEnv.js';
-import { getEnvironmentConfig } from './src/config/environment.js';
-import { GenerateAnimationRequestSchema, GenerateAnimationResponseSchema } from './src/types/schemas.js';
+import { SERVER_CONFIG } from '../constants/server.js';
+import { validateEnvironment } from '../utils/validateEnv.js';
+import { getEnvironmentConfig } from '../../config/environment.js';
+import { GenerateAnimationRequestSchema, GenerateAnimationResponseSchema } from '../types/schemas.js';
 
 dotenv.config();
 validateEnvironment();
@@ -59,7 +59,7 @@ if (!apiKey) {
   console.error('GEMINI_API_KEY environment variable is required');
   process.exit(1);
 }
-const ai = new GoogleGenerativeAI({ apiKey });
+const ai = new GoogleGenAI({ apiKey });
 
 const apiLimiter = rateLimit({
   windowMs: parseInt(process.env.RATE_LIMIT_WINDOW_MS || String(SERVER_CONFIG.DEFAULT_RATE_LIMIT_WINDOW_MS), 10),
@@ -174,8 +174,6 @@ app.post('/api/generate-animation', apiLimiter, async (req, res) => {
       }
     }
 
-    const model = ai.getGenerativeModel({ model: 'gemini-2.5-flash' });
-
     let imagePart;
     if (fileUri) {
       imagePart = {
@@ -193,11 +191,14 @@ app.post('/api/generate-animation', apiLimiter, async (req, res) => {
       };
     }
 
-    const result = await model.generateContentStream([sanitizedPrompt, imagePart]);
+    const result = await ai.models.generateContentStream({
+        model: 'gemini-2.5-flash',
+        contents: [sanitizedPrompt, imagePart]
+    });
 
     res.setHeader('Content-Type', 'application/json');
 
-    for await (const chunk of result.stream) {
+    for await (const chunk of result) {
       res.write(JSON.stringify(chunk));
     }
 
@@ -223,7 +224,7 @@ const UploadFileRequestSchema = z.object({
 app.post('/api/upload-file', apiLimiter, async (req, res) => {
   try {
     const { file, mimeType } = UploadFileRequestSchema.parse(req.body);
-    const result = await ai.uploadFile(file, { mimeType });
+    const result = await ai.files.upload({ file, mimeType });
     res.json(result);
   } catch (error) {
     handleApiError(error, 'upload file', res);
@@ -250,8 +251,6 @@ app.post('/api/post-process', apiLimiter, async (req, res) => {
       temperature,
     } = PostProcessRequestSchema.parse(req.body);
 
-    const model = ai.getGenerativeModel({ model: 'gemini-2.5-flash-image-preview' });
-
     const parts = [
       {
         inlineData: {
@@ -272,7 +271,8 @@ app.post('/api/post-process', apiLimiter, async (req, res) => {
 
     parts.push({ text: postProcessPrompt });
 
-    const result = await model.generateContent({
+    const result = await ai.models.generateContent({
+      model: 'gemini-2.5-flash-image-preview',
       contents: [
         {
           role: 'user',
@@ -285,7 +285,7 @@ app.post('/api/post-process', apiLimiter, async (req, res) => {
       },
     });
 
-    res.json(result.response);
+    res.json(result);
   } catch (error) {
     handleApiError(error, 'post-process animation', res);
   }
@@ -301,9 +301,8 @@ app.post('/api/detect-objects', apiLimiter, async (req, res) => {
   try {
     const { base64SpriteSheet, mimeType, detectionPrompt } = DetectObjectsRequestSchema.parse(req.body);
 
-    const model = ai.getGenerativeModel({ model: 'gemini-2.5-flash' });
-
-    const result = await model.generateContent({
+    const result = await ai.models.generateContent({
+      model: 'gemini-2.5-flash',
       contents: [
         {
           role: 'user',
@@ -323,7 +322,7 @@ app.post('/api/detect-objects', apiLimiter, async (req, res) => {
       },
     });
 
-    res.json(result.response);
+    res.json(result);
   } catch (error) {
     handleApiError(error, 'detect objects', res);
   }

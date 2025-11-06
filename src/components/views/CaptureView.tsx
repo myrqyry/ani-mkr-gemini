@@ -1,6 +1,6 @@
 import React from 'react';
 import { AppState, AppStatus } from 'src/types/types';
-import { promptSuggestions } from 'prompts';
+import { promptSuggestions } from '../../../services/prompts';
 import { FRAME_COUNTS } from 'src/constants/app';
 import { UploadIcon, XCircleIcon, CameraIcon, LinkIcon, SwitchCameraIcon } from 'src/components/icons';
 import AniMkrGeminiButton from 'src/components/AniMkrGeminiButton';
