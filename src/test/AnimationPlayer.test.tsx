@@ -2,8 +2,8 @@
 import React from 'react';
 import { render, screen, fireEvent } from '@testing-library/react';
 import { describe, it, expect, vi } from 'vitest';
-import AnimationPlayer from 'src/components/AnimationPlayer';
-import { AnimationAssets } from 'src/services/geminiService';
+import AnimationPlayer from '@components/AnimationPlayer';
+import { AnimationAssets } from '@services/gemini';
 
 const mockAssets: AnimationAssets = {
   imageData: {

@@ -1,8 +1,8 @@
 import { describe, it, expect, vi } from 'vitest';
 import { renderHook, act } from '@testing-library/react';
 import { useAnimationCreator } from './useAnimationCreator';
-import * as imageUtils from '../utils/image';
-import { AppStatus } from '../types/types';
+import * as imageUtils from '@utils/image';
+import { AppStatus } from '@types/types';
 
 // Mock the global fetch function
 global.fetch = vi.fn();

@@ -1,4 +1,4 @@
-import { Theme } from '../types/types';
+import { Theme } from '@types/types';
 
 /**
  * The available themes.

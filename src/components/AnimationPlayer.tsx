@@ -5,8 +5,8 @@
 
 
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { AnimationAssets, BoundingBox } from '../services/geminiService';
-import { Frame } from '../types';
+import { AnimationAssets, BoundingBox } from '@services/geminiService';
+import { Frame } from '@types';
 import Loader from './Loader';
 import { ExportIcon, InfoIcon, XCircleIcon, SettingsIcon, LoaderIcon, WandIcon } from './icons';
 

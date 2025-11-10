@@ -1,7 +1,7 @@
 import React from 'react';
 import AppFooter from './AppFooter';
 import AppModals from './AppModals';
-import { cn } from '../../utils/cn';
+import { cn } from '@utils/cn';
 
 const layoutStyles = {
   container: "h-dvh bg-background text-foreground flex flex-col items-center p-4 overflow-y-auto",

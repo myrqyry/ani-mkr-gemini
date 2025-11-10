@@ -1,6 +1,6 @@
 import React from 'react';
 import { AppState, AppStatus } from 'src/types/types';
-import { promptSuggestions } from '../../../services/prompts';
+import { promptSuggestions } from '@services/prompts';
 import { FRAME_COUNTS } from 'src/constants/app';
 import { UploadIcon, XCircleIcon, CameraIcon, LinkIcon, SwitchCameraIcon } from 'src/components/icons';
 import AniMkrGeminiButton from 'src/components/AniMkrGeminiButton';
@@ -8,6 +8,7 @@ import FileUploadManager, { FileUploadManagerHandles } from 'src/components/feat
 import AssetManager from 'src/components/features/uploader/AssetManager';
 import CameraView, { CameraViewHandles } from 'src/components/CameraView';
 import { categorizeError, getErrorTitle } from 'src/utils/errorHandler';
+import { useUndoRedo, useKeyboardShortcuts } from '@hooks';
 
 interface CaptureViewProps {
   state: AppState;
@@ -24,6 +25,7 @@ interface CaptureViewProps {
   handlePrimaryAction: () => void;
   hasMultipleCameras: boolean;
   isCameraOpen: boolean;
+  isDebouncing: boolean;
   REQUIRE_IMAGE_FOR_ANIMATION: boolean;
   ALLOW_MULTIPLE_EMOJI_SELECTION: boolean;
 }
@@ -45,6 +47,7 @@ const CaptureView: React.FC<CaptureViewProps> = ({
   handlePrimaryAction,
   hasMultipleCameras,
   isCameraOpen,
+  isDebouncing,
   REQUIRE_IMAGE_FOR_ANIMATION,
   ALLOW_MULTIPLE_EMOJI_SELECTION,
 }) => {
@@ -57,6 +60,24 @@ const CaptureView: React.FC<CaptureViewProps> = ({
     error,
     styleIntensity,
   } = state;
+
+  const promptHistory = useUndoRedo(storyPrompt);
+
+  useKeyboardShortcuts([
+    {
+      key: 'z',
+      ctrlKey: true,
+      callback: promptHistory.undo,
+      disabled: !promptHistory.canUndo,
+    },
+    {
+      key: 'z',
+      ctrlKey: true,
+      shiftKey: true,
+      callback: promptHistory.redo,
+      disabled: !promptHistory.canRedo,
+    },
+  ]);
 
   return (
     <div className={CONTAINER_CLASSES}>
@@ -114,8 +135,8 @@ const CaptureView: React.FC<CaptureViewProps> = ({
           id="storyPrompt"
           rows={3}
           className="w-full bg-[var(--color-overlay)] text-[var(--color-text-base)] border border-[var(--color-surface-alt)] rounded-lg px-4 py-3 focus:ring-[var(--color-accent)] focus:border-[var(--color-accent)] transition-all duration-300 text-lg resize-none overflow-y-auto"
-          value={storyPrompt}
-          onChange={e => actions.setStoryPrompt(e.target.value)}
+          value={promptHistory.state}
+          onChange={e => promptHistory.set(e.target.value)}
           onFocus={() => actions.setIsPromptFocused(true)}
           onBlur={() => {
             actions.setIsPromptFocused(false);
@@ -257,6 +278,7 @@ const CaptureView: React.FC<CaptureViewProps> = ({
           <AniMkrGeminiButton
             onClick={handlePrimaryAction}
             disabled={isAniMkrGeminiDisabled}
+            isLoading={isDebouncing}
             aria-label={isCameraOpen ? 'Capture and Animate' : 'Create Animation'}
           />
         </div>

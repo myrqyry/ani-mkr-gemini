@@ -1,5 +1,5 @@
 
-import { AppState, AppAction } from '../types/types';
+import { AppState, AppAction } from '@types/types';
 
 export const animationReducer = (state: Partial<AppState>, action: AppAction): Partial<AppState> => {
   switch (action.type) {

@@ -1,7 +1,7 @@
 import React from 'react';
 import { renderHook, act } from '@testing-library/react';
 import { describe, it, expect, vi } from 'vitest';
-import { useThemeManager } from 'src/hooks/useThemeManager';
+import { useThemeManager } from '@hooks/useThemeManager';
 
 describe('useThemeManager hook', () => {
     it('should not update custom themes when importing a file with invalid structure', async () => {

@@ -4,9 +4,9 @@
 */
 
 import React from 'react';
-import AppRouter from './components/router/AppRouter';
-import AppLayout from './components/layout/AppLayout';
-import ErrorBoundary from './components/ErrorBoundary';
+import AppRouter from '@components/router/AppRouter';
+import AppLayout from '@components/layout/AppLayout';
+import ErrorBoundary from '@components/ErrorBoundary';
 
 /**
  * The main App component.

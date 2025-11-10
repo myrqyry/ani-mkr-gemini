@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import { Frame } from '../types';
+import { Frame } from '@types';
 
 /**
  * The assets for an animation.

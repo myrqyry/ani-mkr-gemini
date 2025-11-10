@@ -8,10 +8,10 @@ import DOMPurify from 'isomorphic-dompurify';
 import crypto from 'crypto';
 import helmet from 'helmet';
 import { z } from 'zod';
-import { SERVER_CONFIG } from '../constants/server.js';
-import { validateEnvironment } from '../utils/validateEnv.js';
+import { SERVER_CONFIG } from '@constants/server.js';
+import { validateEnvironment } from '@utils/validateEnv.js';
 import { getEnvironmentConfig } from '../../config/environment.js';
-import { GenerateAnimationRequestSchema, GenerateAnimationResponseSchema } from '../types/schemas.js';
+import { GenerateAnimationRequestSchema, GenerateAnimationResponseSchema } from '@types/schemas.js';
 
 dotenv.config();
 validateEnvironment();

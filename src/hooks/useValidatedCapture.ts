@@ -1,7 +1,7 @@
 import { useCallback } from 'react';
 import { z } from 'zod';
-import { imageDataSchema } from '../schemas/validation';
-import { AppError } from '../types/types';
+import { imageDataSchema } from '@schemas/validation';
+import { AppError } from '@types/types';
 
 const createAppError = (type: AppError['type'], message: string, originalError?: Error): AppError => ({
     type,

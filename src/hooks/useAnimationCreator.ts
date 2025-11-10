@@ -1,9 +1,9 @@
 import { useCallback, useRef, useEffect } from 'react';
-import { AppStatus, ImageState, AnimationAssets, AppError } from '../types/types';
-import { generateAnimationAssets } from '../services/gemini';
-import { buildCreativeInstruction, promptSuggestions } from '../services/prompts';
-import { resizeImage } from '../utils/image';
-import { MAIN_IMAGE_MAX_SIZE } from '../constants/app';
+import { AppStatus, ImageState, AnimationAssets, AppError } from '@types/types';
+import { generateAnimationAssets } from '@services/gemini';
+import { buildCreativeInstruction, promptSuggestions } from '@services/prompts';
+import { resizeImage } from '@utils/image';
+import { MAIN_IMAGE_MAX_SIZE } from '@constants/app';
 
 const createAppError = (type: AppError['type'], message: string, originalError?: Error): AppError => ({
   type,

@@ -1,11 +1,30 @@
+// src/components/common/ViewSkeleton.tsx
 import React from 'react';
 
-const ViewSkeleton: React.FC = () => {
+interface ViewSkeletonProps {
+  type?: 'capture' | 'animation' | 'error' | 'loading';
+}
+
+const ViewSkeleton: React.FC<ViewSkeletonProps> = ({ type = 'loading' }) => {
+  const getMessage = () => {
+    switch (type) {
+      case 'capture':
+        return 'Loading camera interface...';
+      case 'animation':
+        return 'Loading animation player...';
+      case 'error':
+        return 'Loading error view...';
+      default:
+        return 'Loading...';
+    }
+  };
+
   return (
-    <div className="w-full max-w-md mx-auto animate-pulse">
-      <div className="h-8 bg-gray-300 rounded-md mb-4"></div>
-      <div className="h-64 bg-gray-300 rounded-lg mb-4"></div>
-      <div className="h-10 bg-gray-300 rounded-md"></div>
+    <div className="flex items-center justify-center min-h-screen bg-gradient-to-br from-purple-50 to-blue-50">
+      <div className="text-center">
+        <div className="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-purple-600 mb-4"></div>
+        <p className="text-gray-600 text-lg">{getMessage()}</p>
+      </div>
     </div>
   );
 };

@@ -1,5 +1,5 @@
 import React, { Suspense } from 'react';
-import ErrorBoundary from '../ErrorBoundary'; // Assuming ErrorBoundary is in the parent directory
+import ErrorBoundary from '@components/ErrorBoundary';
 
 interface AsyncBoundaryProps {
   children: React.ReactNode;

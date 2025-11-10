@@ -1,10 +1,10 @@
 import { describe, it, expect, vi } from 'vitest';
 import { renderHook, act } from '@testing-library/react';
 import { usePostProcessing } from './usePostProcessing';
-import * as geminiService from '../services/gemini';
-import * as imageUtils from '../utils/image';
-import * as prompts from '../services/prompts';
-import { AppStatus } from '../types/types';
+import * as geminiService from '@services/gemini';
+import * as imageUtils from '@utils/image';
+import * as prompts from '@services/prompts';
+import { AppStatus } from '@types/types';
 
 vi.mock('../services/gemini');
 vi.mock('../utils/image');

@@ -1,8 +1,8 @@
 import React from 'react';
-import { useUIState, useAnimationState } from 'src/contexts/AppStateContext';
-import ExportModal from 'src/components/ExportModal';
-import ThemeCustomizer from 'src/components/features/theme/ThemeCustomizer';
-import { useThemeManager } from 'src/hooks/useThemeManager';
+import { useUIState, useAnimationState } from "@contexts/AppStateContext";
+import ExportModal from "@components/ExportModal";
+import ThemeCustomizer from "@components/features/theme/ThemeCustomizer";
+import { useThemeManager } from '@hooks/useThemeManager';
 
 const AppModals: React.FC = () => {
   const { ui, actions: uiActions } = useUIState();
