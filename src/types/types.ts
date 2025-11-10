@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import { BoundingBox, AnimationAssets } from '../services/gemini';
+import { BoundingBox, AnimationAssets } from '@services/gemini';
 
 export enum AppStatus {
   Capturing = 'capturing',

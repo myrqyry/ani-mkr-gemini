@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
-import { Theme, CustomThemes } from '../types/types';
-import { THEMES, EDITABLE_THEME_PROPERTIES } from '../constants/theme';
+import { Theme, CustomThemes } from '@types/types';
+import { THEMES, EDITABLE_THEME_PROPERTIES } from '@constants/theme';
 
 /**
  * Manages the application's theme, including theme switching, custom colors, and import/export functionality.

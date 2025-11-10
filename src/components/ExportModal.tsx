@@ -4,8 +4,9 @@
  */
 
 import React, { useState } from 'react';
-import { exportToGif, exportToMp4, exportToWebP, exportToPngSequence } from '../utils/exportUtils';
+import { exportToGif, exportToMp4, exportToWebP, exportToPngSequence } from '@utils/exportUtils';
 import AnimatedExportButton from './AnimatedExportButton';
+import { useToast } from '@contexts/ToastContext';
 
 // Add a declaration for the JSZip library loaded from the CDN.
 declare var JSZip: any;
@@ -39,6 +40,7 @@ const ExportModal: React.FC<ExportModalProps> = ({ frames, width, height, onClos
   const [isExporting, setIsExporting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [exportProgress, setExportProgress] = useState('');
+  const { addToast } = useToast();
 
   const dataURLtoBlob = (dataurl: string): Blob => {
       const arr = dataurl.split(',');
@@ -79,6 +81,7 @@ const ExportModal: React.FC<ExportModalProps> = ({ frames, width, height, onClos
       document.body.removeChild(a);
       URL.revokeObjectURL(a.href);
       setExportProgress('PNG sequence download complete!');
+      addToast('Animation exported successfully!', 'success');
   };
 
   const handleExport = async () => {

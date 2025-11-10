@@ -1,6 +1,6 @@
 import React from 'react';
-import { useThemeManager } from 'src/hooks/useThemeManager';
-import ThemeSwitcher from 'src/components/features/theme/ThemeSwitcher';
+import { useThemeManager } from "@hooks/useThemeManager";
+import ThemeSwitcher from "@components/features/theme/ThemeSwitcher";
 
 const AppFooter: React.FC = () => {
     const {

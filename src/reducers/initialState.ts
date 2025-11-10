@@ -1,4 +1,4 @@
-import { AppState, AppStatus } from '../types/types';
+import { AppState, AppStatus } from '@types/types';
 
 /**
  * The initial state for the app.

@@ -19,6 +19,7 @@ interface AniMkrGeminiButtonProps {
   onClick: () => void;
   'aria-label': string;
   disabled?: boolean;
+  isLoading?: boolean;
 }
 
 /**
@@ -26,13 +27,13 @@ interface AniMkrGeminiButtonProps {
  * @param {AniMkrGeminiButtonProps} props - The props for the component.
  * @returns {React.ReactElement} The rendered component.
  */
-const AniMkrGeminiButton: React.FC<AniMkrGeminiButtonProps> = ({ onClick, 'aria-label': ariaLabel, disabled = false }) => {
+const AniMkrGeminiButton: React.FC<AniMkrGeminiButtonProps> = ({ onClick, 'aria-label': ariaLabel, disabled = false, isLoading = false }) => {
   const buttonRef = useRef<HTMLButtonElement>(null);
   const iconRef = useRef<HTMLDivElement>(null);
   const textRef = useRef<HTMLDivElement>(null);
   const charsRef = useRef<HTMLSpanElement[]>([]);
 
-  const text = 'ani-mkr-gemini';
+  const text = isLoading ? 'Preparing...' : 'ani-mkr-gemini';
 
   useEffect(() => {
     if (!textRef.current) return;

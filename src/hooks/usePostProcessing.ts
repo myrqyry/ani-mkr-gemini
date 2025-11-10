@@ -1,9 +1,9 @@
 import { useCallback } from 'react';
-import { AppStatus, AnimationAssets, ImageState, AppError } from '../types/types';
-import { postProcessAnimation } from '../services/gemini';
-import { buildPostProcessPrompt } from '../services/prompts';
-import { resizeImage } from '../utils/image';
-import { STYLE_IMAGE_MAX_SIZE } from '../constants/app';
+import { AppStatus, AnimationAssets, ImageState, AppError } from '@types/types';
+import { postProcessAnimation } from '@services/gemini';
+import { buildPostProcessPrompt } from '@services/prompts';
+import { resizeImage } from '@utils/image';
+import { STYLE_IMAGE_MAX_SIZE } from '@constants/app';
 
 const createAppError = (type: AppError['type'], message: string, originalError?: Error): AppError => ({
   type,

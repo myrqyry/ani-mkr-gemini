@@ -1,11 +1,9 @@
 
 import React, { createContext, useContext, useReducer, useMemo } from 'react';
-import { AppState, AppStatus, AppError, ImageState, AppAction } from '../types/types';
-import { AnimationAssets, BoundingBox } from '../services/gemini';
-import { uiReducer } from '../reducers/uiReducer';
-import { animationReducer } from '../reducers/animationReducer';
-import { imageReducer } from '../reducers/imageReducer';
-import { initialState } from '../reducers/initialState';
+import { AppState, AppStatus, AppError, ImageState, AppAction } from '@types/types';
+import { AnimationAssets, BoundingBox } from '@services/gemini';
+import { rootReducer } from '@reducers/rootReducer';
+import { initialState } from '@reducers/initialState';
 
 // Define the shape of the sliced state
 interface UIState {
@@ -103,39 +101,18 @@ const createImageActions = (dispatch: React.Dispatch<AppAction>): ImageActions =
 
 // Create the provider
 export const AppStateProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-    const [uiState, uiDispatch] = useReducer(uiReducer, initialState.ui);
-    const [animationState, animationDispatch] = useReducer(animationReducer, initialState.animation);
-    const [imageState, imageDispatch] = useReducer(imageReducer, initialState.image);
+    const [state, dispatch] = useReducer(rootReducer, initialState);
 
     const stateValue = useMemo(() => ({
-        ui: {
-            appStatus: uiState.appStatus,
-            loadingMessage: uiState.loadingMessage,
-            error: uiState.error,
-            isPromptFocused: uiState.isPromptFocused,
-            isCameraOpen: uiState.isCameraOpen,
-            isExportModalOpen: uiState.isExportModalOpen,
-            hasMultipleCameras: uiState.hasMultipleCameras,
-            typedPlaceholder: uiState.typedPlaceholder,
-        },
-        animation: {
-            animationAssets: animationState.animationAssets,
-            detectedObjects: animationState.detectedObjects,
-            storyPrompt: animationState.storyPrompt,
-            frameCount: animationState.frameCount,
-            postProcessStrength: animationState.postProcessStrength,
-            styleIntensity: animationState.styleIntensity,
-        },
-        image: {
-            imageState: imageState.imageState,
-            selectedAsset: imageState.selectedAsset,
-        },
-    }), [uiState, animationState, imageState]);
+        ui: state.ui,
+        animation: state.animation,
+        image: state.image,
+    }), [state]);
 
     const actionsValue = useMemo(() => ({
-        uiActions: createUIActions(uiDispatch),
-        animationActions: createAnimationActions(animationDispatch),
-        imageActions: createImageActions(imageDispatch),
+        uiActions: createUIActions(dispatch),
+        animationActions: createAnimationActions(dispatch),
+        imageActions: createImageActions(dispatch),
     }), []);
 
     return (
@@ -170,4 +147,23 @@ export const useImageState = () => {
     const actions = useContext(AppActionsContext);
     if (!actions) throw new Error('useImageState must be used within AppStateProvider');
     return { image: context.image, actions: actions.imageActions };
+};
+
+export const useAppState = () => {
+  const stateContext = useContext(AppStateContext);
+  const actionsContext = useContext(AppActionsContext);
+
+  if (!stateContext) throw new Error('useAppState must be used within AppStateProvider');
+  if (!actionsContext) throw new Error('useAppState must be used within AppStateProvider');
+
+  return {
+    ui: stateContext.ui,
+    animation: stateContext.animation,
+    image: stateContext.image,
+    actions: {
+      ...actionsContext.uiActions,
+      ...actionsContext.animationActions,
+      ...actionsContext.imageActions,
+    },
+  };
 };
