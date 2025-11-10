@@ -1,6 +1,6 @@
 // src/components/common/LazyComponentBoundary.tsx
 import React, { Suspense, ComponentType } from 'react';
-import ErrorBoundary from '../ErrorBoundary';
+import ErrorBoundary from '@components/ErrorBoundary';
 import ViewSkeleton from './ViewSkeleton';
 
 interface LazyComponentBoundaryProps {
