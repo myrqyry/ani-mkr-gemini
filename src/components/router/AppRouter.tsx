@@ -127,7 +127,7 @@ const AppRouter: React.FC = () => {
       // Only create animation if flag is set
       if (shouldAnimateAfterCapture.current) {
         shouldAnimateAfterCapture.current = false;
-        await handleCreateAnimation();
+        await animationCallbackRef.current();
       }
     } catch (error) {
       const appError = createAppError(
